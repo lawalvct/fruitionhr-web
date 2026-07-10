@@ -50,8 +50,8 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden w-60 shrink-0 flex-col border-r bg-sidebar md:flex">
-        <div className="flex h-14 items-center border-b px-4 font-semibold">
+      <aside className="hidden w-60 shrink-0 flex-col bg-sidebar text-sidebar-foreground md:flex">
+        <div className="flex h-14 items-center border-b border-sidebar-border px-4 font-semibold text-white">
           {title}
         </div>
         <nav className="flex flex-1 flex-col gap-1 p-2">
@@ -66,7 +66,7 @@ export function AppShell({
                   "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   active
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground",
+                    : "text-sidebar-foreground/75 hover:bg-white/10 hover:text-white",
                 )}
               >
                 <item.icon className="size-4" />

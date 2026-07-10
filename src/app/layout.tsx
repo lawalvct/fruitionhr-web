@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   },
   description:
     "All-in-one HR & payroll platform for growing African businesses — employees, attendance, leave, payroll, and compliance in one system.",
+  icons: {
+    icon: [{ url: "/fruitionhr-logo-icon.svg", type: "image/svg+xml" }],
+  },
 };
 
 export default function RootLayout({

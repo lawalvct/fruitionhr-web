@@ -1,0 +1,21 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">FruitionHR Icon</title>
+  <desc id="desc">Three progressive green square frames representing growth and workforce development.</desc>
+  <defs>
+    <linearGradient id="greenGradient" x1="74" y1="78" x2="418" y2="418" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#86EFAC"/>
+      <stop offset="0.45" stop-color="#22C55E"/>
+      <stop offset="1" stop-color="#047857"/>
+    </linearGradient>
+    <filter id="softShadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="16" stdDeviation="14" flood-color="#064E3B" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="#ECFDF5"/>
+  <g filter="url(#softShadow)">
+    <rect x="72" y="70" width="96" height="96" rx="10" fill="#F0FDF4" stroke="#86EFAC" stroke-width="22" transform="rotate(-6 120 118)"/>
+    <rect x="142" y="142" width="148" height="148" rx="16" fill="#DCFCE7" stroke="#22C55E" stroke-width="32" transform="rotate(-3 216 216)"/>
+    <rect x="244" y="244" width="190" height="190" rx="22" fill="#F0FDF4" stroke="url(#greenGradient)" stroke-width="40" transform="rotate(2 339 339)"/>
+    <path d="M142 142 C174 173 203 198 236 232 C275 270 305 304 340 340" stroke="#16A34A" stroke-width="9" stroke-linecap="round" opacity="0.35"/>
+  </g>
+</svg>

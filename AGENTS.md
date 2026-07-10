@@ -32,6 +32,10 @@ API must be running: `cd ../fruitionhr-api && php artisan serve --port=8010`.
 | app.* + `localhost` (dev) | `/app` | `src/app/app/` |
 | admin.* | `/admin` | `src/app/admin/` |
 
+Local dev without hosts entries: `localhost:3000` = tenant app, `127.0.0.1:3000` = marketing site (any host that isn't `localhost`/`app.*`/`admin.*` falls through to marketing — which is also why the Vercel default domain shows the website).
+
+Brand: `fruition-*` colour scale + per-surface themes are defined in `globals.css`; full spec in `../fruitionhr_brand_theme.md`. Marketing CTA links to the app come from `src/lib/site.ts` (`NEXT_PUBLIC_APP_URL`).
+
 Inside a surface, always link with host-relative paths (`/dashboard`, `/login`) — never include the internal `/app` or `/admin` prefix.
 
 ## Structure & conventions

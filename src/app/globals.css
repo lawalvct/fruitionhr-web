@@ -4,6 +4,26 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* FruitionHR brand palette — see ../fruitionhr_brand_theme.md */
+@theme {
+  --color-fruition-50: #ecfdf5;
+  --color-fruition-100: #dcfce7;
+  --color-fruition-200: #bbf7d0;
+  --color-fruition-300: #86efac;
+  --color-fruition-400: #4ade80;
+  --color-fruition-500: #22c55e;
+  --color-fruition-600: #16a34a;
+  --color-fruition-700: #047857;
+  --color-fruition-800: #065f46;
+  --color-fruition-900: #064e3b;
+  --color-fruition-950: #022c22;
+
+  --color-success: #16a34a;
+  --color-warning: #f59e0b;
+  --color-danger: #dc2626;
+  --color-info: #2563eb;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -49,38 +69,40 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* FruitionHR light theme — website + tenant dashboard */
+  --background: #f8fafc;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  --primary: #047857;
+  --primary-foreground: #ffffff;
+  --secondary: #dcfce7;
+  --secondary-foreground: #064e3b;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #ecfdf5;
+  --accent-foreground: #047857;
+  --destructive: #dc2626;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #22c55e;
+  --chart-1: #047857;
+  --chart-2: #22c55e;
+  --chart-3: #86efac;
+  --chart-4: #f59e0b;
+  --chart-5: #2563eb;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Tenant dashboard sidebar: dark green, active item in secondary green */
+  --sidebar: #064e3b;
+  --sidebar-foreground: #dcfce7;
+  --sidebar-primary: #22c55e;
+  --sidebar-primary-foreground: #022c22;
+  --sidebar-accent: #22c55e;
+  --sidebar-accent-foreground: #022c22;
+  --sidebar-border: #065f46;
+  --sidebar-ring: #22c55e;
 }
 
 .dark {
