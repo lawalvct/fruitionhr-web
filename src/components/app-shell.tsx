@@ -6,6 +6,7 @@ import { LogOut, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { useLogout, useMe } from "@/features/auth/use-auth";
+import { NotificationBell } from "@/features/notifications/notification-bell";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,8 @@ export function AppShell({
           <div className="text-sm text-muted-foreground">
             {me?.tenant?.name}
           </div>
+          <div className="flex items-center gap-1">
+          <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<Button variant="ghost" className="gap-2 px-2" />}
@@ -105,6 +108,7 @@ export function AppShell({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </header>
         <main className="flex-1 p-6">{children}</main>
       </div>

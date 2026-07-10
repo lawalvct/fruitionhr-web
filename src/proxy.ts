@@ -31,7 +31,12 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (surface && !pathname.startsWith(`/${surface}`)) {
+  // Segment-aware check: "/approvals" must NOT match the "/app" prefix.
+  const alreadyPrefixed =
+    surface !== null &&
+    (pathname === `/${surface}` || pathname.startsWith(`/${surface}/`));
+
+  if (surface && !alreadyPrefixed) {
     const url = request.nextUrl.clone();
     url.pathname = `/${surface}${pathname}`;
     return NextResponse.rewrite(url);

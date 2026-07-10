@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { mapLaravelErrorsToForm, nullableNumber } from "@/lib/forms";
+import { DocumentsPanel } from "@/features/documents/documents-panel";
 import { useCompanyOptions } from "@/features/company/use-company";
 import { useAssignEmployee, useEmployee } from "@/features/employees/use-employees";
 
@@ -283,7 +284,10 @@ export function EmployeeProfilePage() {
       )}
 
       {activeTab === "Documents" && (
-        <p className="text-sm text-muted-foreground">Document upload lands with the document engine.</p>
+        <DocumentsPanel
+          owner={{ ownerType: "employee", ownerId: params.id }}
+          managePermission="employees.update"
+        />
       )}
 
       <AssignmentDialog employeeId={params.id} open={assignmentOpen} onOpenChange={setAssignmentOpen} />
