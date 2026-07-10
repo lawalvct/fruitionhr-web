@@ -44,7 +44,7 @@ export function ConfirmDialog({
               Cancel
             </Dialog.Close>
             <Button type="button" variant="destructive" disabled={isPending} onClick={onConfirm}>
-              {isPending ? "Deleting..." : confirmLabel}
+              {isPending ? "Working…" : confirmLabel}
             </Button>
           </div>
         </Dialog.Popup>

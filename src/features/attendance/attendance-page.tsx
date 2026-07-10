@@ -1,0 +1,214 @@
+"use client";
+
+import { CalendarClock, ChevronLeft, ChevronRight, Clock, Lock, Plus, Upload } from "lucide-react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+
+import { Can } from "@/components/can";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { apiErrorMessage } from "@/lib/api";
+import {
+  useAttendanceGrid,
+  useFinalizePeriod,
+  type DayStatusCode,
+} from "@/features/attendance/use-attendance";
+import { ImportDialog } from "@/features/attendance/import-dialog";
+import { RecordLogDialog } from "@/features/attendance/record-log-dialog";
+import { ShiftsDialog } from "@/features/attendance/shifts-dialog";
+
+// Status → dot colour + short label for legend/cells.
+const STATUS_META: Record<DayStatusCode, { color: string; label: string; short: string }> = {
+  present: { color: "bg-fruition-500", label: "Present", short: "P" },
+  late: { color: "bg-warning", label: "Late", short: "L" },
+  early_exit: { color: "bg-amber-400", label: "Early exit", short: "E" },
+  absent: { color: "bg-danger", label: "Absent", short: "A" },
+  on_leave: { color: "bg-info", label: "On leave", short: "V" },
+  holiday: { color: "bg-fruition-200", label: "Holiday", short: "H" },
+  weekend: { color: "bg-slate-200", label: "Weekend", short: "" },
+  no_shift: { color: "bg-slate-100", label: "No shift", short: "?" },
+};
+
+function currentPeriod(): string {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function shiftPeriod(period: string, delta: number): string {
+  const [y, m] = period.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function periodLabel(period: string): string {
+  const [y, m] = period.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("en-NG", { month: "long", year: "numeric" });
+}
+
+function daysInPeriod(period: string): string[] {
+  const [y, m] = period.split("-").map(Number);
+  const count = new Date(y, m, 0).getDate();
+  return Array.from({ length: count }, (_, i) => `${period}-${String(i + 1).padStart(2, "0")}`);
+}
+
+export function AttendancePage() {
+  const [period, setPeriod] = useState(currentPeriod());
+  const { data: grid, isLoading } = useAttendanceGrid(period);
+  const finalize = useFinalizePeriod(period);
+
+  const [recordOpen, setRecordOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [shiftsOpen, setShiftsOpen] = useState(false);
+  const [finalizeOpen, setFinalizeOpen] = useState(false);
+
+  const days = useMemo(() => daysInPeriod(period), [period]);
+  const employees = grid?.rows.map((r) => r.employee) ?? [];
+  const isFinalized = grid?.is_finalized ?? false;
+
+  const runFinalize = async () => {
+    try {
+      const res = await finalize.mutateAsync();
+      toast.success(`Attendance finalized for ${res.finalized} employees.`);
+    } catch (error) {
+      toast.error(apiErrorMessage(error));
+    } finally {
+      setFinalizeOpen(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Attendance"
+        description="Track daily attendance, then finalize the month for payroll."
+        actions={
+          <Can permission="attendance.manage">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => setShiftsOpen(true)}>
+                <Clock className="size-4" /> Shifts
+              </Button>
+              <Button variant="outline" onClick={() => setImportOpen(true)} disabled={isFinalized}>
+                <Upload className="size-4" /> Import
+              </Button>
+              <Button onClick={() => setRecordOpen(true)} disabled={isFinalized}>
+                <Plus className="size-4" /> Record
+              </Button>
+            </div>
+          </Can>
+        }
+      />
+
+      {/* Period navigator + finalize */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon-sm" onClick={() => setPeriod(shiftPeriod(period, -1))} aria-label="Previous month">
+            <ChevronLeft className="size-4" />
+          </Button>
+          <span className="min-w-40 text-center text-sm font-semibold">{periodLabel(period)}</span>
+          <Button variant="outline" size="icon-sm" onClick={() => setPeriod(shiftPeriod(period, 1))} aria-label="Next month">
+            <ChevronRight className="size-4" />
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {isFinalized ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-fruition-50 px-3 py-1 text-xs font-semibold text-fruition-700 ring-1 ring-fruition-200">
+              <Lock className="size-3" /> Finalized
+            </span>
+          ) : (
+            <Can permission="attendance.approve">
+              <Button variant="outline" onClick={() => setFinalizeOpen(true)}>
+                <CalendarClock className="size-4" /> Finalize month
+              </Button>
+            </Can>
+          )}
+        </div>
+      </div>
+
+      {/* Grid */}
+      {isLoading ? (
+        <Skeleton className="h-64 w-full" />
+      ) : !grid?.rows.length ? (
+        <p className="text-sm text-muted-foreground">
+          No employees to show. Add employees and assign shifts first.
+        </p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full border-collapse text-xs">
+            <thead>
+              <tr className="border-b bg-muted/50">
+                <th className="sticky left-0 z-10 bg-muted/50 px-3 py-2 text-left font-medium">
+                  Employee
+                </th>
+                {days.map((d) => (
+                  <th key={d} className="w-7 px-0 py-2 text-center font-medium text-muted-foreground">
+                    {Number(d.slice(-2))}
+                  </th>
+                ))}
+                <th className="px-3 py-2 text-center font-medium">P/L/A</th>
+              </tr>
+            </thead>
+            <tbody>
+              {grid.rows.map((row) => (
+                <tr key={row.employee.id} className="border-b last:border-0 hover:bg-muted/30">
+                  <td className="sticky left-0 z-10 bg-background px-3 py-1.5 whitespace-nowrap">
+                    <span className="font-medium">{row.employee.name}</span>
+                    <span className="ml-1 text-muted-foreground">{row.employee.employee_number}</span>
+                  </td>
+                  {days.map((d) => {
+                    const day = row.days[d];
+                    const meta = day ? STATUS_META[day.status] : null;
+                    return (
+                      <td key={d} className="px-0 py-1.5 text-center">
+                        {meta && meta.short ? (
+                          <span
+                            title={`${meta.label}${day!.late_minutes ? ` · ${day!.late_minutes}m late` : ""}`}
+                            className={`mx-auto flex size-5 items-center justify-center rounded text-[9px] font-bold text-white ${meta.color}`}
+                          >
+                            {meta.short}
+                          </span>
+                        ) : (
+                          <span className={`mx-auto block size-5 rounded ${meta?.color ?? ""}`} />
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="px-3 py-1.5 text-center whitespace-nowrap">
+                    <span className="text-fruition-700">{row.summary?.days_present ?? "–"}</span>
+                    {" / "}
+                    <span className="text-warning">{row.summary?.days_late ?? "–"}</span>
+                    {" / "}
+                    <span className="text-danger">{row.summary?.days_absent ?? "–"}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+        {Object.entries(STATUS_META).map(([key, meta]) => (
+          <span key={key} className="inline-flex items-center gap-1.5">
+            <span className={`size-3 rounded ${meta.color}`} /> {meta.label}
+          </span>
+        ))}
+      </div>
+
+      <RecordLogDialog open={recordOpen} onOpenChange={setRecordOpen} period={period} employees={employees} />
+      <ImportDialog open={importOpen} onOpenChange={setImportOpen} period={period} />
+      <ShiftsDialog open={shiftsOpen} onOpenChange={setShiftsOpen} />
+      <ConfirmDialog
+        open={finalizeOpen}
+        onOpenChange={setFinalizeOpen}
+        title={`Finalize ${periodLabel(period)}?`}
+        description="This locks attendance for the month. Logs can no longer be edited, and payroll will use these totals. Continue?"
+        confirmLabel="Finalize"
+        isPending={finalize.isPending}
+        onConfirm={runFinalize}
+      />
+    </div>
+  );
+}
