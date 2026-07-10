@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { useRegister } from "@/features/auth/use-auth";
-import { apiErrorMessage, isValidationError } from "@/lib/api";
+import { mapLaravelErrorsToForm } from "@/lib/forms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,18 +52,7 @@ export function RegisterForm() {
       await registerTenant.mutateAsync(values);
       router.replace("/dashboard");
     } catch (error) {
-      if (isValidationError(error)) {
-        const fieldErrors = error.response?.data.errors ?? {};
-        for (const [field, messages] of Object.entries(fieldErrors)) {
-          if ((fieldNames as readonly string[]).includes(field)) {
-            setError(field as (typeof fieldNames)[number], {
-              message: messages[0],
-            });
-          }
-        }
-        return;
-      }
-      setError("root", { message: apiErrorMessage(error) });
+      mapLaravelErrorsToForm(error, setError, fieldNames);
     }
   });
 
