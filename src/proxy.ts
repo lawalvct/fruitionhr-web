@@ -10,7 +10,11 @@ import type { NextRequest } from "next/server";
  *   fruitionhr.com/*        → (marketing) routes, served as-is
  *   app.fruitionhr.com/*    → rewritten to /app/*      (tenant dashboard)
  *   admin.fruitionhr.com/*  → rewritten to /admin/*    (super admin)
- *   localhost/*             → treated as the tenant app (dev convenience)
+ *
+ * Local dev (browsers resolve *.localhost automatically, no hosts file):
+ *   localhost:3000          → marketing website
+ *   app.localhost:3000      → tenant app
+ *   admin.localhost:3000    → super admin
  */
 export function proxy(request: NextRequest) {
   const host = request.headers.get("host") ?? "";
@@ -19,7 +23,7 @@ export function proxy(request: NextRequest) {
 
   const surface = hostname.startsWith("admin.")
     ? "admin"
-    : hostname.startsWith("app.") || hostname === "localhost"
+    : hostname.startsWith("app.")
       ? "app"
       : null;
 
