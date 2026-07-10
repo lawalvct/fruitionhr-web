@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api, ensureCsrf } from "@/lib/api";
-import type { Branch, Department, EmploymentType, JobGrade } from "@/features/company/types";
+import type { Branch, Department, EmploymentType, JobGrade, Position } from "@/features/company/types";
 
 interface CollectionResponse<TData> {
   data: TData[];
@@ -49,6 +49,16 @@ export function useCompanyOptions() {
     },
   });
 
+  const positions = useQuery({
+    queryKey: [...companyKeys.positions, "options"],
+    queryFn: async () => {
+      const { data } = await api.get<CollectionResponse<Position>>("/api/v1/positions", {
+        params: { per_page: 100, sort: "title" },
+      });
+      return data.data;
+    },
+  });
+
   const employmentTypes = useQuery({
     queryKey: [...companyKeys.employmentTypes, "options"],
     queryFn: async () => {
@@ -59,7 +69,7 @@ export function useCompanyOptions() {
     },
   });
 
-  return { branches, departments, jobGrades, employmentTypes };
+  return { branches, departments, positions, jobGrades, employmentTypes };
 }
 
 export function useCreateCompanyResource<TInput>(endpoint: string, queryKey: readonly unknown[]) {

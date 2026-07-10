@@ -33,11 +33,13 @@ export function DataTable<TData>({
   columns,
   queryKey,
   endpoint,
+  filters = {},
   emptyText = "No records found.",
 }: {
   columns: ColumnDef<TData>[];
   queryKey: readonly unknown[];
   endpoint: string;
+  filters?: Record<string, string | number | null | undefined>;
   emptyText?: string;
 }) {
   const [page, setPage] = useState(1);
@@ -46,12 +48,19 @@ export function DataTable<TData>({
   const sort = sorting[0];
 
   const tableQuery = useQuery({
-    queryKey: [...queryKey, { page, search, sort }],
+    queryKey: [...queryKey, { page, search, sort, filters }],
     queryFn: async () => {
+      const filterParams = Object.fromEntries(
+        Object.entries(filters)
+          .filter(([, value]) => value !== undefined && value !== null && value !== "")
+          .map(([key, value]) => [`filter[${key}]`, value]),
+      );
+
       const { data } = await api.get<PaginatedResponse<TData>>(endpoint, {
         params: {
           page,
           "filter[search]": search || undefined,
+          ...filterParams,
           sort: sort ? `${sort.desc ? "-" : ""}${sort.id}` : undefined,
         },
       });
