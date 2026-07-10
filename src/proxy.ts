@@ -27,6 +27,10 @@ export function proxy(request: NextRequest) {
       ? "app"
       : null;
 
+  if (pathname.startsWith("/api/") || pathname.startsWith("/sanctum/")) {
+    return NextResponse.next();
+  }
+
   if (surface && !pathname.startsWith(`/${surface}`)) {
     const url = request.nextUrl.clone();
     url.pathname = `/${surface}${pathname}`;

@@ -8,7 +8,7 @@ import axios, { AxiosError } from "axios";
  * - ensureCsrf(): call once before the first mutating request (login/register)
  */
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL || undefined,
   withCredentials: true,
   withXSRFToken: true,
   headers: { Accept: "application/json" },
