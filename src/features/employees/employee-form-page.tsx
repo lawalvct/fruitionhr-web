@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { mapLaravelErrorsToForm } from "@/lib/forms";
+import { mapLaravelErrorsToForm, nullableNumber } from "@/lib/forms";
 import { useCompanyOptions } from "@/features/company/use-company";
 import { useCreateEmployee, type EmployeeInput } from "@/features/employees/use-employees";
 
@@ -98,7 +98,7 @@ function SelectField({
       <select
         id={name}
         className="h-8 rounded-md border bg-background px-2 text-sm"
-        {...register(name, { setValueAs: (value) => (value === "" ? null : Number(value)) })}
+        {...register(name, { setValueAs: nullableNumber })}
       >
         <option value="">None</option>
         {options.map((option) => (
@@ -227,7 +227,18 @@ export function EmployeeFormPage() {
       const employee = await createEmployee.mutateAsync(input);
       router.replace(`/employees/${employee.id}`);
     } catch (error) {
-      mapLaravelErrorsToForm(error, form.setError, fieldNames);
+      mapLaravelErrorsToForm(error, form.setError, fieldNames, {
+        "assignment.branch_id": "branch_id",
+        "assignment.department_id": "department_id",
+        "assignment.position_id": "position_id",
+        "assignment.job_grade_id": "job_grade_id",
+        "assignment.employment_type_id": "employment_type_id",
+        "assignment.effective_from": "effective_from",
+        "statutory.tax_id": "tax_id",
+        "statutory.pension_pin": "pension_pin",
+        "statutory.pension_fund_administrator": "pension_fund_administrator",
+        "statutory.nhf_number": "nhf_number",
+      });
     }
   });
 

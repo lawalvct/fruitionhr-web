@@ -17,7 +17,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { mapLaravelErrorsToForm } from "@/lib/forms";
+import { mapLaravelErrorsToForm, nullableNumber } from "@/lib/forms";
 import type {
   Branch,
   CompanyResource,
@@ -95,7 +95,7 @@ function Field({
         id={name}
         type={type}
         {...register(name, {
-          setValueAs: type === "number" ? (value) => (value === "" ? null : Number(value)) : undefined,
+          setValueAs: type === "number" ? nullableNumber : undefined,
         })}
       />
       {error && <p className="text-sm text-destructive">{error}</p>}
@@ -258,7 +258,7 @@ function SelectField({
       <select
         id={name}
         className="h-8 rounded-md border bg-background px-2 text-sm"
-        {...register(name, { setValueAs: (value) => (value === "" ? null : Number(value)) })}
+        {...register(name, { setValueAs: nullableNumber })}
       >
         <option value="">None</option>
         {options.map((option) => (

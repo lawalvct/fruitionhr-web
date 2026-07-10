@@ -44,11 +44,16 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  // In this codebase `render` is used for links (<a>/<Link>); tell Base UI
+  // so it applies the right semantics instead of warning. Pass nativeButton
+  // explicitly if you ever render a real <button> via `render`.
+  nativeButton,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
   return (
     <ButtonPrimitive
       data-slot="button"
+      nativeButton={nativeButton ?? props.render === undefined}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />

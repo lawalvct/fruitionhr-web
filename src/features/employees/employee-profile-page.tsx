@@ -15,7 +15,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { mapLaravelErrorsToForm } from "@/lib/forms";
+import { mapLaravelErrorsToForm, nullableNumber } from "@/lib/forms";
 import { useCompanyOptions } from "@/features/company/use-company";
 import { useAssignEmployee, useEmployee } from "@/features/employees/use-employees";
 
@@ -58,7 +58,7 @@ function SelectField({
       <select
         id={name}
         className="h-8 rounded-md border bg-background px-2 text-sm"
-        {...register(name, { setValueAs: (value) => (value === "" ? null : Number(value)) })}
+        {...register(name, { setValueAs: nullableNumber })}
       >
         <option value="">None</option>
         {options.map((option) => (
