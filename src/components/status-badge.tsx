@@ -21,6 +21,13 @@ const statusClasses: Record<string, string> = {
   completed: 'bg-fruition-600 text-white',
   in_progress: 'bg-cyan-100 text-cyan-800',
   cancelled: 'bg-slate-100 text-slate-700',
+  review: 'bg-amber-100 text-amber-800',
+  pending_approval: 'bg-amber-100 text-amber-800',
+  calculating: 'bg-blue-100 text-blue-700',
+  locked: 'bg-fruition-900 text-fruition-100',
+  paid: 'bg-fruition-600 text-white',
+  reversed: 'bg-red-100 text-red-700',
+  finalized: 'bg-fruition-600 text-white',
 };
 
 export function StatusBadge({ status }: { status: string }) {
