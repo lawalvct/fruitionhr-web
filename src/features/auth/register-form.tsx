@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { useRegister } from "@/features/auth/use-auth";
+import { authDestination, useRegister } from "@/features/auth/use-auth";
 import { mapLaravelErrorsToForm } from "@/lib/forms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,8 +49,8 @@ export function RegisterForm() {
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      await registerTenant.mutateAsync(values);
-      router.replace("/dashboard");
+      const me = await registerTenant.mutateAsync(values);
+      router.replace(authDestination(me));
     } catch (error) {
       mapLaravelErrorsToForm(error, setError, fieldNames);
     }
@@ -65,32 +65,59 @@ export function RegisterForm() {
       )}
       <div className="grid gap-2">
         <Label htmlFor="company_name">Company name</Label>
-        <Input id="company_name" placeholder="Acme Industries Ltd" {...register("company_name")} />
+        <Input
+          id="company_name"
+          placeholder="Acme Industries Ltd"
+          {...register("company_name")}
+        />
         {errors.company_name && (
           <p className="text-sm text-destructive">{errors.company_name.message}</p>
         )}
       </div>
       <div className="grid gap-2">
         <Label htmlFor="name">Your full name</Label>
-        <Input id="name" autoComplete="name" {...register("name")} />
+        <Input
+          id="name"
+          autoComplete="name"
+          placeholder="Ada Okafor"
+          {...register("name")}
+        />
         {errors.name && (
           <p className="text-sm text-destructive">{errors.name.message}</p>
         )}
       </div>
       <div className="grid gap-2">
         <Label htmlFor="email">Work email</Label>
-        <Input id="email" type="email" autoComplete="email" {...register("email")} />
+        <Input
+          id="email"
+          type="email"
+          autoComplete="email"
+          placeholder="you@company.com"
+          {...register("email")}
+        />
         {errors.email && (
           <p className="text-sm text-destructive">{errors.email.message}</p>
         )}
       </div>
       <div className="grid gap-2">
         <Label htmlFor="phone">Phone (optional)</Label>
-        <Input id="phone" type="tel" autoComplete="tel" {...register("phone")} />
+        <Input
+          id="phone"
+          type="tel"
+          autoComplete="tel"
+          placeholder="+234 801 234 5678"
+          {...register("phone")}
+        />
       </div>
       <div className="grid gap-2">
         <Label htmlFor="password">Password</Label>
-        <Input id="password" type="password" autoComplete="new-password" {...register("password")} />
+        <Input
+          id="password"
+          type="password"
+          autoComplete="new-password"
+          placeholder="At least 8 characters"
+          {...register("password")}
+        />
         {errors.password && (
           <p className="text-sm text-destructive">{errors.password.message}</p>
         )}
@@ -101,6 +128,7 @@ export function RegisterForm() {
           id="password_confirmation"
           type="password"
           autoComplete="new-password"
+          placeholder="Repeat your password"
           {...register("password_confirmation")}
         />
         {errors.password_confirmation && (
@@ -110,7 +138,7 @@ export function RegisterForm() {
         )}
       </div>
       <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? "Creating your workspace…" : "Create account"}
+        {isSubmitting ? "Creating your workspace..." : "Create account"}
       </Button>
     </form>
   );

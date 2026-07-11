@@ -8,6 +8,17 @@ import type { LoginInput, Me, RegisterInput } from "@/types/auth";
 
 export const ME_QUERY_KEY = ["me"] as const;
 
+export function authDestination(me: Me): string {
+  if (!me.is_email_verified) return "/verify-email";
+
+  const onboarding = me.tenant?.onboarding_status;
+  if (me.roles?.includes("owner") && onboarding !== "completed" && onboarding !== "skipped") {
+    return "/onboarding";
+  }
+
+  return "/dashboard";
+}
+
 async function fetchMe(): Promise<Me | null> {
   try {
     const { data } = await api.get<{ data: Me }>("/api/v1/me");
@@ -55,6 +66,28 @@ export function useRegister() {
     },
     onSuccess: (me) => {
       queryClient.setQueryData(ME_QUERY_KEY, me);
+    },
+  });
+}
+
+export function useVerifyEmail() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (code: string) => {
+      await ensureCsrf();
+      const { data } = await api.post<{ data: Me }>("/api/v1/email/verify", { code });
+      return data.data;
+    },
+    onSuccess: (me) => queryClient.setQueryData(ME_QUERY_KEY, me),
+  });
+}
+
+export function useResendVerificationCode() {
+  return useMutation({
+    mutationFn: async () => {
+      await ensureCsrf();
+      await api.post("/api/v1/email/resend");
     },
   });
 }

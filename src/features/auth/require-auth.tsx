@@ -23,10 +23,20 @@ export function RequireAuth({
   const { data: me, isPending } = useMe();
 
   const denied = !isPending && (!me || (superAdminOnly && !me.is_super_admin));
+  const activationPath = !isPending && me && !superAdminOnly
+    ? !me.is_email_verified
+      ? "/verify-email"
+      : me.roles?.includes("owner") &&
+          me.tenant?.onboarding_status !== "completed" &&
+          me.tenant?.onboarding_status !== "skipped"
+        ? "/onboarding"
+        : null
+    : null;
 
   useEffect(() => {
     if (denied) router.replace("/login");
-  }, [denied, router]);
+    else if (activationPath) router.replace(activationPath);
+  }, [activationPath, denied, router]);
 
   if (isPending) {
     return (
@@ -37,7 +47,7 @@ export function RequireAuth({
     );
   }
 
-  if (denied) return null;
+  if (denied || activationPath) return null;
 
   return <>{children}</>;
 }

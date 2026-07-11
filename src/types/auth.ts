@@ -5,6 +5,8 @@ export interface MeTenant {
   name: string;
   slug: string;
   status: "active" | "suspended" | "cancelled";
+  onboarding_status: "not_started" | "in_progress" | "completed" | "skipped";
+  onboarding_step: number;
 }
 
 export interface MeEmployee {
@@ -17,6 +19,7 @@ export interface Me {
   id: number;
   name: string;
   email: string;
+  is_email_verified: boolean;
   is_super_admin: boolean;
   status: "active" | "invited" | "disabled";
   tenant?: MeTenant;

@@ -41,7 +41,7 @@ export function AuthSidePanel() {
           Run HR &amp; payroll without the spreadsheets
         </h2>
         <p className="mt-3 max-w-md text-fruition-100/85">
-          From onboarding to payslip — built for Nigerian &amp; African
+          From onboarding to payslip - built for Nigerian &amp; African
           businesses.
         </p>
         <div className="mt-9">

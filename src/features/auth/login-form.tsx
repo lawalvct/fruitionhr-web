@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { useLogin } from "@/features/auth/use-auth";
+import { authDestination, useLogin } from "@/features/auth/use-auth";
 import { apiErrorMessage, isValidationError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }) {
+export function LoginForm({ redirectTo }: { redirectTo?: string }) {
   const router = useRouter();
   const login = useLogin();
 
@@ -31,8 +31,8 @@ export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      await login.mutateAsync(values);
-      router.replace(redirectTo);
+      const me = await login.mutateAsync(values);
+      router.replace(redirectTo ?? authDestination(me));
     } catch (error) {
       if (isValidationError(error)) {
         const fieldErrors = error.response?.data.errors ?? {};
@@ -80,7 +80,7 @@ export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }
         )}
       </div>
       <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? "Signing in…" : "Sign in"}
+        {isSubmitting ? "Signing in..." : "Sign in"}
       </Button>
     </form>
   );
