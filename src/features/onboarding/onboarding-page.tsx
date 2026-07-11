@@ -54,6 +54,7 @@ const steps = [
   { label: "Work and payroll", description: "Calendar and pay cycle", icon: Banknote },
   { label: "Starter workspace", description: "Review your defaults", icon: Sparkles },
 ];
+const companySizes = ["1-10", "11-50", "51-200", "201-500", "500+"];
 
 const selectClass = "h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-xs outline-none transition focus:border-fruition-500 focus:ring-2 focus:ring-fruition-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400";
 
@@ -307,7 +308,7 @@ function OnboardingForm({ initial, initialStep }: { initial: OnboardingData; ini
               <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
                 <Field label="Company name" className="sm:col-span-2"><Input value={form.company_name ?? ""} onChange={(event) => set("company_name", event.target.value)} /></Field>
                 <Field label="Industry"><Input placeholder="Professional services" value={form.industry ?? ""} onChange={(event) => set("industry", event.target.value)} /></Field>
-                <Field label="Company size"><select className={selectClass} value={form.company_size ?? ""} onChange={(event) => set("company_size", event.target.value)}><option value="">Select size</option>{["1-10", "11-50", "51-200", "201-500", "500+"].map((size) => <option key={size}>{size} employees</option>)}</select></Field>
+                <Field label="Company size"><select className={selectClass} value={form.company_size?.replace(/ employees$/, "") ?? ""} onChange={(event) => set("company_size", event.target.value)}><option value="">Select size</option>{companySizes.map((size) => <option key={size} value={size}>{size} employees</option>)}</select></Field>
                 <Field label="Phone"><Input type="tel" placeholder="+234 800 000 0000" value={form.phone ?? ""} onChange={(event) => set("phone", event.target.value)} /></Field>
                 <Field label="Website"><Input type="url" placeholder="https://company.com" value={form.website ?? ""} onChange={(event) => set("website", event.target.value)} /></Field>
                 <Field label="Main office address" className="sm:col-span-2"><Input placeholder="Street and building" value={form.address ?? ""} onChange={(event) => set("address", event.target.value)} /></Field>
