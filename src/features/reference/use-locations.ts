@@ -20,12 +20,20 @@ export interface StateOption {
   type: string | null;
 }
 
+type ListEnvelope<T> = { data: T[] | { data: T[] } };
+
+function extractList<T>(payload: ListEnvelope<T>): T[] {
+  if (Array.isArray(payload.data)) return payload.data;
+
+  return Array.isArray(payload.data.data) ? payload.data.data : [];
+}
+
 export function useCountries() {
   return useQuery({
-    queryKey: ["reference", "countries"],
+    queryKey: ["reference", "countries", "v2"],
     queryFn: async () => {
-      const { data } = await api.get<{ data: CountryOption[] }>("/api/v1/reference/countries");
-      return data.data;
+      const { data } = await api.get<ListEnvelope<CountryOption>>("/api/v1/reference/countries");
+      return extractList(data);
     },
     staleTime: 24 * 60 * 60 * 1000,
   });
@@ -33,10 +41,10 @@ export function useCountries() {
 
 export function useStates(countryCode?: string) {
   return useQuery({
-    queryKey: ["reference", "states", countryCode],
+    queryKey: ["reference", "states", "v2", countryCode],
     queryFn: async () => {
-      const { data } = await api.get<{ data: StateOption[] }>(`/api/v1/reference/countries/${countryCode}/states`);
-      return data.data;
+      const { data } = await api.get<ListEnvelope<StateOption>>(`/api/v1/reference/countries/${countryCode}/states`);
+      return extractList(data);
     },
     enabled: Boolean(countryCode),
     staleTime: 24 * 60 * 60 * 1000,
