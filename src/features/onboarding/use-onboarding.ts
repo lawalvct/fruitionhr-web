@@ -18,6 +18,7 @@ export interface OnboardingData {
   city?: string;
   state?: string;
   country?: string;
+  country_code?: string;
   timezone?: string;
   currency?: "NGN";
   pay_frequency?: "monthly" | "biweekly" | "weekly";

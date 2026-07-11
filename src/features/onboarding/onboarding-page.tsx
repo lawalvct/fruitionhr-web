@@ -12,6 +12,7 @@ import {
   useSaveOnboarding,
   useSkipOnboarding,
 } from "@/features/onboarding/use-onboarding";
+import { useCountries, useStates } from "@/features/reference/use-locations";
 import { apiErrorMessage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const defaultData: OnboardingData = {
   country: "Nigeria",
+  country_code: "NG",
   timezone: "Africa/Lagos",
   currency: "NGN",
   pay_frequency: "monthly",
@@ -72,8 +74,10 @@ function OnboardingForm({ initial, initialStep }: { initial: OnboardingData; ini
   const save = useSaveOnboarding();
   const complete = useCompleteOnboarding();
   const skip = useSkipOnboarding();
+  const countries = useCountries();
   const [step, setStep] = useState(Math.min(Math.max(initialStep, 1), 3));
   const [form, setForm] = useState<OnboardingData>(initial);
+  const states = useStates(form.country_code);
   const [error, setError] = useState<string | null>(null);
 
   const set = <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) =>
@@ -147,8 +151,9 @@ function OnboardingForm({ initial, initialStep }: { initial: OnboardingData; ini
                 <Field label="Website"><Input type="url" placeholder="https://company.com" value={form.website ?? ""} onChange={(e) => set("website", e.target.value)} /></Field>
                 <Field label="RC number (optional)"><Input value={form.rc_number ?? ""} onChange={(e) => set("rc_number", e.target.value)} /></Field>
                 <div className="sm:col-span-2"><Field label="Main office address"><Input value={form.address ?? ""} onChange={(e) => set("address", e.target.value)} /></Field></div>
+                <Field label="Country"><select className="h-9 rounded-md border bg-background px-3 text-sm" value={form.country_code ?? ""} onChange={(event) => { const country = countries.data?.find((item) => item.code === event.target.value); setForm((current) => ({ ...current, country_code: country?.code, country: country?.name, state: "", tax_state: "" })); }} disabled={countries.isPending}><option value="">Select country</option>{countries.data?.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}</select></Field>
                 <Field label="City"><Input value={form.city ?? ""} onChange={(e) => set("city", e.target.value)} /></Field>
-                <Field label="State"><Input value={form.state ?? ""} onChange={(e) => set("state", e.target.value)} /></Field>
+                <Field label="State / region"><select className="h-9 rounded-md border bg-background px-3 text-sm" value={form.state ?? ""} onChange={(e) => set("state", e.target.value)} disabled={!form.country_code || states.isPending}><option value="">{states.isPending ? "Loading states..." : "Select state"}</option>{states.data?.map((state) => <option key={state.id} value={state.name}>{state.name}</option>)}</select></Field>
               </div>
             </div>
           )}
@@ -160,7 +165,7 @@ function OnboardingForm({ initial, initialStep }: { initial: OnboardingData; ini
               <div className="mt-6 grid gap-5 sm:grid-cols-2">
                 <Field label="Pay frequency"><select className="h-9 rounded-md border bg-background px-3 text-sm" value={form.pay_frequency} onChange={(e) => set("pay_frequency", e.target.value as OnboardingData["pay_frequency"])}><option value="monthly">Monthly</option><option value="biweekly">Every two weeks</option><option value="weekly">Weekly</option></select></Field>
                 <Field label="Pay day"><Input type="number" min={1} max={31} value={form.pay_day ?? 25} onChange={(e) => set("pay_day", Number(e.target.value))} /></Field>
-                <Field label="Tax state"><Input placeholder="Lagos" value={form.tax_state ?? ""} onChange={(e) => set("tax_state", e.target.value)} /></Field>
+                <Field label="Tax state"><select className="h-9 rounded-md border bg-background px-3 text-sm" value={form.tax_state ?? ""} onChange={(e) => set("tax_state", e.target.value)} disabled={!form.country_code || states.isPending}><option value="">Select tax state</option>{states.data?.map((state) => <option key={state.id} value={state.name}>{state.name}</option>)}</select></Field>
                 <Field label="Company TIN (optional)"><Input value={form.tin ?? ""} onChange={(e) => set("tin", e.target.value)} /></Field>
                 <div className="sm:col-span-2">
                   <Label>Working days</Label>
