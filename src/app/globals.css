@@ -193,10 +193,28 @@
   animation: welcome-confetti-burst 900ms var(--confetti-delay) cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
+/* Staggered dashboard entrance: <div class="rise-in" style="--rise-index: n"> */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise-in {
+  animation: rise-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--rise-index, 0) * 55ms);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .welcome-dialog,
   .welcome-celebration-icon,
-  .welcome-confetti {
+  .welcome-confetti,
+  .rise-in {
     animation: none;
   }
 }
