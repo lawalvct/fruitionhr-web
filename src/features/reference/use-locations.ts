@@ -20,17 +20,19 @@ export interface StateOption {
   type: string | null;
 }
 
-type ListEnvelope<T> = { data: T[] | { data: T[] } };
+type ListPayload<T> = T[] | { data?: T[] | { data?: T[] } };
+type ListEnvelope<T> = { data?: T[] | { data?: T[] } };
 
-function extractList<T>(payload: ListEnvelope<T>): T[] {
+function extractList<T>(payload: ListPayload<T>): T[] {
+  if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload.data)) return payload.data;
 
-  return Array.isArray(payload.data.data) ? payload.data.data : [];
+  return Array.isArray(payload.data?.data) ? payload.data.data : [];
 }
 
 export function useCountries() {
   return useQuery({
-    queryKey: ["reference", "countries", "v2"],
+    queryKey: ["reference", "countries", "v3"],
     queryFn: async () => {
       const { data } = await api.get<ListEnvelope<CountryOption>>("/api/v1/reference/countries");
       return extractList(data);
@@ -41,7 +43,7 @@ export function useCountries() {
 
 export function useStates(countryCode?: string) {
   return useQuery({
-    queryKey: ["reference", "states", "v2", countryCode],
+    queryKey: ["reference", "states", "v3", countryCode],
     queryFn: async () => {
       const { data } = await api.get<ListEnvelope<StateOption>>(`/api/v1/reference/countries/${countryCode}/states`);
       return extractList(data);

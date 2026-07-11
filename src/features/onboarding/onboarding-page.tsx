@@ -227,6 +227,8 @@ function OnboardingForm({ initial, initialStep }: { initial: OnboardingData; ini
   const states = useStates(form.country_code);
   const [error, setError] = useState<string | null>(null);
   const busy = save.isPending || complete.isPending || skip.isPending;
+  const countryOptions = countries.data ?? [];
+  const stateOptions = states.data ?? [];
 
   const set = <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -259,7 +261,7 @@ function OnboardingForm({ initial, initialStep }: { initial: OnboardingData; ini
   }
 
   function changeCountry(code: string) {
-    const country = countries.data?.find((item) => item.code === code);
+    const country = countryOptions.find((item) => item.code === code);
     setForm((current) => ({
       ...current,
       country_code: country?.code,
@@ -309,8 +311,28 @@ function OnboardingForm({ initial, initialStep }: { initial: OnboardingData; ini
                 <Field label="Phone"><Input type="tel" placeholder="+234 800 000 0000" value={form.phone ?? ""} onChange={(event) => set("phone", event.target.value)} /></Field>
                 <Field label="Website"><Input type="url" placeholder="https://company.com" value={form.website ?? ""} onChange={(event) => set("website", event.target.value)} /></Field>
                 <Field label="Main office address" className="sm:col-span-2"><Input placeholder="Street and building" value={form.address ?? ""} onChange={(event) => set("address", event.target.value)} /></Field>
-                <Field label="Country"><select className={selectClass} value={form.country_code ?? ""} onChange={(event) => changeCountry(event.target.value)} disabled={countries.isPending}><option value="">{countries.isPending ? "Loading countries..." : "Select country"}</option>{countries.data?.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}</select></Field>
-                <Field label="State / region"><select className={selectClass} value={form.state ?? ""} onChange={(event) => set("state", event.target.value)} disabled={!form.country_code || states.isPending}><option value="">{states.isPending ? "Loading regions..." : states.data?.length ? "Select state or region" : "No regions available"}</option>{states.data?.map((state) => <option key={state.id} value={state.name}>{state.name}</option>)}</select></Field>
+                <Field label="Country">
+                  <select className={selectClass} value={form.country_code ?? ""} onChange={(event) => changeCountry(event.target.value)} disabled={countries.isPending}>
+                    <option value="">{countries.isPending ? "Loading countries..." : "Select country"}</option>
+                    {countryOptions.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}
+                  </select>
+                  {countries.isError && (
+                    <button type="button" className="w-fit text-xs font-medium text-destructive underline-offset-4 hover:underline" onClick={() => void countries.refetch()}>
+                      Countries could not load. Retry
+                    </button>
+                  )}
+                </Field>
+                <Field label="State / region">
+                  <select className={selectClass} value={form.state ?? ""} onChange={(event) => set("state", event.target.value)} disabled={!form.country_code || states.isPending || states.isError}>
+                    <option value="">{states.isPending ? "Loading regions..." : stateOptions.length ? "Select state or region" : "No regions available"}</option>
+                    {stateOptions.map((state) => <option key={state.id} value={state.name}>{state.name}</option>)}
+                  </select>
+                  {states.isError && (
+                    <button type="button" className="w-fit text-xs font-medium text-destructive underline-offset-4 hover:underline" onClick={() => void states.refetch()}>
+                      Regions could not load. Retry
+                    </button>
+                  )}
+                </Field>
                 <Field label="City"><Input value={form.city ?? ""} onChange={(event) => set("city", event.target.value)} /></Field>
                 <Field label="RC number" hint="Optional company registration number"><Input value={form.rc_number ?? ""} onChange={(event) => set("rc_number", event.target.value)} /></Field>
               </div>
@@ -321,7 +343,17 @@ function OnboardingForm({ initial, initialStep }: { initial: OnboardingData; ini
                 <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
                   <Field label="Pay frequency"><select className={selectClass} value={form.pay_frequency} onChange={(event) => set("pay_frequency", event.target.value as OnboardingData["pay_frequency"])}><option value="monthly">Monthly</option><option value="biweekly">Every two weeks</option><option value="weekly">Weekly</option></select></Field>
                   <Field label="Pay day" hint="Day of the month"><Input type="number" min={1} max={31} value={form.pay_day ?? 25} onChange={(event) => set("pay_day", Number(event.target.value))} /></Field>
-                  <Field label="Tax state"><select className={selectClass} value={form.tax_state ?? ""} onChange={(event) => set("tax_state", event.target.value)} disabled={!form.country_code || states.isPending}><option value="">Select tax state</option>{states.data?.map((state) => <option key={state.id} value={state.name}>{state.name}</option>)}</select></Field>
+                  <Field label="Tax state">
+                    <select className={selectClass} value={form.tax_state ?? ""} onChange={(event) => set("tax_state", event.target.value)} disabled={!form.country_code || states.isPending || states.isError}>
+                      <option value="">{states.isPending ? "Loading tax states..." : stateOptions.length ? "Select tax state" : "No tax states available"}</option>
+                      {stateOptions.map((state) => <option key={state.id} value={state.name}>{state.name}</option>)}
+                    </select>
+                    {states.isError && (
+                      <button type="button" className="w-fit text-xs font-medium text-destructive underline-offset-4 hover:underline" onClick={() => void states.refetch()}>
+                        Tax states could not load. Retry
+                      </button>
+                    )}
+                  </Field>
                   <Field label="Company TIN" hint="Optional tax identification number"><Input value={form.tin ?? ""} onChange={(event) => set("tin", event.target.value)} /></Field>
                 </div>
 
