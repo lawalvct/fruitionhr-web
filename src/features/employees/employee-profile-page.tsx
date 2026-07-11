@@ -17,10 +17,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { mapLaravelErrorsToForm, nullableNumber } from "@/lib/forms";
 import { DocumentsPanel } from "@/features/documents/documents-panel";
+import { CompensationTab } from "@/features/payroll/compensation-tab";
 import { useCompanyOptions } from "@/features/company/use-company";
 import { useAssignEmployee, useEmployee } from "@/features/employees/use-employees";
 
-const tabs = ["Overview", "Employment history", "Contacts", "Bank & statutory", "Documents"] as const;
+const tabs = ["Overview", "Employment history", "Contacts", "Bank & statutory", "Compensation", "Documents"] as const;
 
 const assignmentSchema = z.object({
   branch_id: z.number().nullable(),
@@ -281,6 +282,10 @@ export function EmployeeProfilePage() {
             <p>NHF: {employee.statutory_details?.nhf_number ?? "-"}</p>
           </section>
         </div>
+      )}
+
+      {activeTab === "Compensation" && (
+        <CompensationTab employeeId={params.id} />
       )}
 
       {activeTab === "Documents" && (

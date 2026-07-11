@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, CalendarDays, ClipboardCheck, LayoutDashboard, Settings, Users } from "lucide-react";
+import { Banknote, CalendarClock, CalendarDays, ClipboardCheck, LayoutDashboard, Settings, Users } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { RequireAuth } from "@/features/auth/require-auth";
@@ -12,6 +12,7 @@ const nav: NavItem[] = [
   { href: "/employees", label: "Employees", icon: Users },
   { href: "/attendance", label: "Attendance", icon: CalendarClock },
   { href: "/leave", label: "Leave", icon: CalendarDays },
+  { href: "/payroll", label: "Payroll", icon: Banknote },
   { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
   { href: "/settings/organisation", label: "Settings", icon: Settings },
 ];
