@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell } from "lucide-react";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 interface NotificationItem {
   id: string;
@@ -60,9 +61,8 @@ export function NotificationBell() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={
-          <Button variant="ghost" size="icon" aria-label="Notifications" className="relative" />
-        }
+        aria-label="Notifications"
+        className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative")}
       >
         <Bell className="size-4.5" />
         {unread > 0 && (

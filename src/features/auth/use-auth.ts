@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import axios from "axios";
 
 import { api, ensureCsrf } from "@/lib/api";
@@ -62,12 +61,15 @@ export function useRegister() {
 
 export function useLogout() {
   const queryClient = useQueryClient();
-  const router = useRouter();
 
   const finishLogout = () => {
     queryClient.setQueryData(ME_QUERY_KEY, null);
     queryClient.clear();
-    router.replace("/login");
+    // Hard navigation guarantees a clean slate and respects host-based routing
+    // (the proxy rewrites /login to the correct surface).
+    if (typeof window !== "undefined") {
+      window.location.assign("/login");
+    }
   };
 
   return useMutation({
