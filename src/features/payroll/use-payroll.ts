@@ -40,6 +40,9 @@ export interface PayrollRunSummary {
   id: number;
   period: string;
   status: string;
+  is_reversal?: boolean;
+  reversed_of_run_id?: number | null;
+  reversal_reason?: string | null;
   employee_count: number;
   total_gross: number;
   total_statutory: number;
@@ -49,6 +52,23 @@ export interface PayrollRunSummary {
   submitted_at: string | null;
   approved_at: string | null;
   locked_at: string | null;
+}
+
+export interface VarianceRow {
+  employee_id: number;
+  name: string;
+  current_net: number;
+  previous_net: number;
+  delta: number;
+  percent: number | null;
+  flag: "new" | "changed" | "removed";
+}
+
+export interface VarianceReport {
+  current_period: string;
+  previous_period: string | null;
+  totals: { current_net: number; previous_net: number; delta: number; percent: number | null };
+  rows: VarianceRow[];
 }
 
 export interface PayrollRunEmployeeRow {
@@ -218,6 +238,28 @@ export function usePayrollAction(runId: number) {
       qc.invalidateQueries({ queryKey: payrollKeys.runs });
       qc.invalidateQueries({ queryKey: ["approvals"] });
     },
+  });
+}
+
+export function useReversePayrollRun(runId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (reason: string) => {
+      await ensureCsrf();
+      return (await api.post<{ data: PayrollRunSummary }>(`/api/v1/payroll-runs/${runId}/reverse`, { reason })).data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: payrollKeys.run(runId) });
+      qc.invalidateQueries({ queryKey: payrollKeys.runs });
+    },
+  });
+}
+
+export function useVariance(runId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ["payroll", "variance", runId],
+    enabled,
+    queryFn: async () => (await api.get<{ data: VarianceReport }>(`/api/v1/payroll-runs/${runId}/variance`)).data.data,
   });
 }
 
