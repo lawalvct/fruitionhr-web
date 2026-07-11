@@ -255,7 +255,7 @@ function OnboardingForm({ initial, initialStep }: { initial: OnboardingData; ini
       } else {
         await skip.mutateAsync();
       }
-      router.replace("/dashboard");
+      router.replace(`/dashboard?welcome=${action === "complete" ? "completed" : "skipped"}`);
     } catch (requestError) {
       setError(apiErrorMessage(requestError));
     }
