@@ -64,15 +64,25 @@ export function useLogout() {
   const queryClient = useQueryClient();
   const router = useRouter();
 
+  const finishLogout = () => {
+    queryClient.setQueryData(ME_QUERY_KEY, null);
+    queryClient.clear();
+    router.replace("/login");
+  };
+
   return useMutation({
     mutationFn: async () => {
-      await api.post("/api/v1/logout");
+      // Invalidate the server session. Even if this fails (expired session,
+      // network), we still complete the logout locally below.
+      try {
+        await ensureCsrf();
+        await api.post("/api/v1/logout");
+      } catch {
+        // ignore — client-side logout still proceeds
+      }
     },
-    onSuccess: () => {
-      queryClient.setQueryData(ME_QUERY_KEY, null);
-      queryClient.clear();
-      router.replace("/login");
-    },
+    onSuccess: finishLogout,
+    onError: finishLogout,
   });
 }
 
