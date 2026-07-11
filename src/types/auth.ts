@@ -7,6 +7,12 @@ export interface MeTenant {
   status: "active" | "suspended" | "cancelled";
 }
 
+export interface MeEmployee {
+  id: number;
+  employee_number: string;
+  name: string;
+}
+
 export interface Me {
   id: number;
   name: string;
@@ -14,6 +20,7 @@ export interface Me {
   is_super_admin: boolean;
   status: "active" | "invited" | "disabled";
   tenant?: MeTenant;
+  employee?: MeEmployee;
   roles?: string[];
   permissions?: string[];
 }

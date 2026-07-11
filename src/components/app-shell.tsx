@@ -23,6 +23,7 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
+  permission?: string | string[];
 }
 
 /**
@@ -41,6 +42,13 @@ export function AppShell({
   const pathname = usePathname();
   const { data: me } = useMe();
   const logout = useLogout();
+  const permissions = me?.permissions ?? [];
+
+  const visibleNav = nav.filter((item) => {
+    if (!item.permission || me?.is_super_admin) return true;
+    const required = Array.isArray(item.permission) ? item.permission : [item.permission];
+    return required.some((permission) => permissions.includes(permission));
+  });
 
   const initials = (me?.name ?? "?")
     .split(" ")
@@ -56,7 +64,7 @@ export function AppShell({
           {title}
         </div>
         <nav className="flex flex-1 flex-col gap-1 p-2">
-          {nav.map((item) => {
+          {visibleNav.map((item) => {
             const active =
               pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (

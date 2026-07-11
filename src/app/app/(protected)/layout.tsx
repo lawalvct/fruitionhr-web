@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, CalendarClock, CalendarDays, ClipboardCheck, LayoutDashboard, Settings, Users } from "lucide-react";
+import { Banknote, CalendarClock, CalendarDays, ClipboardCheck, LayoutDashboard, Settings, UserRound, Users } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { RequireAuth } from "@/features/auth/require-auth";
@@ -9,12 +9,13 @@ import { AppShell, type NavItem } from "@/components/app-shell";
 // Nav grows as modules land: Employees, Attendance, Leave, Payroll…
 const nav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/employees", label: "Employees", icon: Users },
-  { href: "/attendance", label: "Attendance", icon: CalendarClock },
-  { href: "/leave", label: "Leave", icon: CalendarDays },
-  { href: "/payroll", label: "Payroll", icon: Banknote },
-  { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
-  { href: "/settings/organisation", label: "Settings", icon: Settings },
+  { href: "/self-service", label: "Self-service", icon: UserRound, permission: "ess.profile.view" },
+  { href: "/employees", label: "Employees", icon: Users, permission: "employees.view" },
+  { href: "/attendance", label: "Attendance", icon: CalendarClock, permission: "attendance.view" },
+  { href: "/leave", label: "Leave", icon: CalendarDays, permission: "leave.view" },
+  { href: "/payroll", label: "Payroll", icon: Banknote, permission: "payroll.view" },
+  { href: "/approvals", label: "Approvals", icon: ClipboardCheck, permission: "mss.approvals.view" },
+  { href: "/settings/organisation", label: "Settings", icon: Settings, permission: "company.view" },
 ];
 
 export default function TenantProtectedLayout({
