@@ -7,10 +7,11 @@ import { RequireAuth } from "@/features/auth/require-auth";
 import { AppShell, type NavItem } from "@/components/app-shell";
 
 // Nav grows as modules land: Employees, Attendance, Leave, Payroll…
-import { BriefcaseBusiness } from 'lucide-react';
+import { BriefcaseBusiness, Gauge } from 'lucide-react';
 
 const nav: NavItem[] = [
   { href: '/recruitment', label: 'Recruitment', icon: BriefcaseBusiness, permission: 'recruitment.view' },
+  { href: '/performance', label: 'Performance', icon: Gauge, permission: ['performance.view', 'performance.review', 'goals.view'] },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/self-service", label: "Self-service", icon: UserRound, permission: "ess.profile.view" },
   { href: "/employees", label: "Employees", icon: Users, permission: "employees.view" },

@@ -19,6 +19,8 @@ const statusClasses: Record<string, string> = {
   accepted: 'bg-fruition-600 text-white',
   hired: 'bg-fruition-600 text-white',
   completed: 'bg-fruition-600 text-white',
+  in_progress: 'bg-cyan-100 text-cyan-800',
+  cancelled: 'bg-slate-100 text-slate-700',
 };
 
 export function StatusBadge({ status }: { status: string }) {
