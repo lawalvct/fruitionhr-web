@@ -12,7 +12,28 @@ interface ResourceResponse<TData> {
 export const employeeKeys = {
   all: ["employees"] as const,
   detail: (id: number | string) => ["employees", String(id)] as const,
+  search: (query: string) => ["employees", "search", query] as const,
 };
+
+export function useEmployeeSearch(query: string, enabled = true) {
+  const normalizedQuery = query.trim();
+
+  return useQuery({
+    queryKey: employeeKeys.search(normalizedQuery),
+    enabled: enabled && normalizedQuery.length >= 2,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data } = await api.get<ResourceResponse<Employee[]>>("/api/v1/employees", {
+        params: {
+          "filter[search]": normalizedQuery,
+          per_page: 8,
+          sort: "first_name",
+        },
+      });
+      return data.data;
+    },
+  });
+}
 
 export interface EmployeeInput {
   first_name: string;

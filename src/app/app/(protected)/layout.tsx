@@ -41,7 +41,7 @@ export default function TenantProtectedLayout({
 }) {
   return (
     <RequireAuth>
-      <AppShell title="FruitionHR" nav={nav}>
+      <AppShell title="FruitionHR" nav={nav} enableEmployeeSearch>
         {children}
       </AppShell>
     </RequireAuth>

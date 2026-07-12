@@ -2,15 +2,17 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ChevronsUpDown, LogOut, Menu, type LucideIcon } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { ChevronsUpDown, LoaderCircle, LogOut, Menu, Search, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useLogout, useMe } from "@/features/auth/use-auth";
+import { useEmployeeSearch } from "@/features/employees/use-employees";
 import { NotificationBell } from "@/features/notifications/notification-bell";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
+import { PageTitleProvider } from "@/components/page-title-context";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 
 export interface NavItem {
@@ -169,6 +171,99 @@ function SidebarBrand({ title, companyName }: { title: string; companyName?: str
   );
 }
 
+function EmployeeSearch({ enabled }: { enabled: boolean }) {
+  const router = useRouter();
+  const searchRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim();
+  const isOpen = enabled && normalizedQuery.length >= 2;
+  const { data: employees = [], isFetching } = useEmployeeSearch(query, enabled);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setQuery("");
+      }
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, [isOpen]);
+
+  const openEmployee = (id: number) => {
+    setQuery("");
+    router.push(`/employees/${id}`);
+  };
+
+  return (
+    <div ref={searchRef} className="relative min-w-0 flex-1 sm:max-w-md">
+      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+      <input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setQuery("");
+          if (event.key === "Enter" && employees[0]) openEmployee(employees[0].id);
+        }}
+        placeholder="Search employees..."
+        aria-label="Search employees"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={isOpen}
+        aria-controls="employee-search-results"
+        className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50/80 pl-9 pr-9 text-sm outline-none transition-colors placeholder:text-slate-400 focus:border-fruition-400 focus:bg-white focus:ring-2 focus:ring-fruition-500/20"
+      />
+      {isFetching && <LoaderCircle className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-fruition-600" />}
+
+      {isOpen && (
+        <div id="employee-search-results" role="listbox" className="absolute left-0 top-full z-50 mt-2 w-[min(28rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-slate-200 bg-popover p-1 text-popover-foreground shadow-xl ring-1 ring-foreground/5">
+          {isFetching ? (
+            <p className="px-3 py-4 text-sm text-muted-foreground">Searching employees...</p>
+          ) : employees.length === 0 ? (
+            <p className="px-3 py-4 text-sm text-muted-foreground">No employees found.</p>
+          ) : (
+            employees.map((employee) => (
+              <button
+                key={employee.id}
+                type="button"
+                role="option"
+                aria-selected={false}
+                onClick={() => openEmployee(employee.id)}
+                className="flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-fruition-50"
+              >
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-fruition-100 text-xs font-semibold text-fruition-800">
+                  {employee.full_name.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium">{employee.full_name}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {employee.employee_number}
+                    {employee.current_assignment?.department?.name ? ` / ${employee.current_assignment.department.name}` : ""}
+                  </span>
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function routePageTitle(pathname: string, items: NavItem[], fallback: string): string {
+  if (pathname === "/employees/new") return "Add employee";
+  if (/^\/employees\/[^/]+\/edit$/.test(pathname)) return "Edit employee";
+  if (/^\/employees\/[^/]+$/.test(pathname)) return "Employee profile";
+  if (/^\/payroll\/[^/]+$/.test(pathname)) return "Payroll run";
+  if (pathname === "/settings/organisation") return "Organisation settings";
+
+  const match = [...items]
+    .sort((left, right) => right.href.length - left.href.length)
+    .find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+
+  return match?.label ?? fallback;
+}
+
 /* ── App shell ─────────────────────────────────────────────────────────────── */
 
 /**
@@ -178,16 +273,20 @@ function SidebarBrand({ title, companyName }: { title: string; companyName?: str
 export function AppShell({
   title,
   nav,
+  enableEmployeeSearch = false,
   children,
 }: {
   title: string;
   nav: NavItem[];
+  enableEmployeeSearch?: boolean;
   children: ReactNode;
 }) {
   const pathname = usePathname();
   const { data: me } = useMe();
   const permissions = me?.permissions ?? [];
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [registeredPageTitle, setRegisteredPageTitle] = useState<string | null>(null);
+  const canSearchEmployees = enableEmployeeSearch && (me?.is_super_admin || permissions.includes("employees.view"));
 
   const visibleNav = nav.filter((item) => {
     if (!item.permission || me?.is_super_admin) return true;
@@ -206,8 +305,10 @@ export function AppShell({
 
   const sidebarSurface =
     "bg-linear-180 from-fruition-900 to-fruition-950 text-fruition-100";
+  const pageTitle = registeredPageTitle ?? routePageTitle(pathname, visibleNav, title);
 
   return (
+    <PageTitleProvider onTitleChange={setRegisteredPageTitle}>
     <div className="flex min-h-screen bg-[#f8fafc]">
       {/* Desktop sidebar */}
       <aside className={cn("hidden w-62 shrink-0 flex-col md:flex", sidebarSurface)}>
@@ -265,7 +366,7 @@ export function AppShell({
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Sticky glass header */}
         <header className="sticky top-0 z-40 flex h-14 items-center justify-between gap-3 border-b border-slate-200/70 bg-white/80 px-4 backdrop-blur-md sm:px-6">
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 shrink-0 items-center gap-2">
             <button
               type="button"
               aria-label="Open navigation"
@@ -274,12 +375,16 @@ export function AppShell({
             >
               <Menu className="size-5" />
             </button>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-800">
-                {me?.tenant?.name ?? title}
-              </p>
-            </div>
+            <h1 className="max-w-40 truncate font-heading text-sm font-semibold text-slate-800 sm:max-w-56 sm:text-base">
+              {pageTitle}
+            </h1>
           </div>
+
+          {canSearchEmployees && (
+            <div className="hidden min-w-0 flex-1 justify-center px-2 sm:flex lg:justify-end lg:px-4">
+              <EmployeeSearch enabled={canSearchEmployees} />
+            </div>
+          )}
 
           <div className="flex items-center gap-1">
             <NotificationBell />
@@ -298,7 +403,7 @@ export function AppShell({
                       {initials}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden text-sm sm:inline">{me?.name}</span>
+                  <span className="hidden text-sm lg:inline">{me?.name}</span>
                 </button>
               )}
             />
@@ -317,5 +422,6 @@ export function AppShell({
         </footer>
       </div>
     </div>
+    </PageTitleProvider>
   );
 }
