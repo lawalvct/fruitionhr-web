@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { Download, Eye, FileSpreadsheet, FileText, Pencil, Plus, Users } from "lucide-react";
+import { Download, Eye, FileSpreadsheet, FileText, Pencil, Plus, Upload, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import type { Department } from "@/features/company/types";
 import { useCompanyOptions } from "@/features/company/use-company";
 import { employeeKeys, useEmployeePhoto } from "@/features/employees/use-employees";
+import { EmployeeImportDialog } from "@/features/employees/employee-import-dialog";
 import type { Employee } from "@/features/employees/types";
 import { api } from "@/lib/api";
 
@@ -47,6 +48,7 @@ export function EmployeesPage() {
   const [departmentId, setDepartmentId] = useState("");
   const [status, setStatus] = useState("");
   const [exporting, setExporting] = useState<"xlsx" | "pdf" | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
   const { departments } = useCompanyOptions();
 
   async function downloadExport(format: "xlsx" | "pdf") {
@@ -144,6 +146,9 @@ export function EmployeesPage() {
               {exporting === "pdf" && <Download className="size-3.5 animate-bounce" />}
             </Button>
             <Can permission="employees.create">
+              <Button type="button" variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload className="size-4" /> Import
+              </Button>
               <Button render={<Link href="/employees/new" />}>
                 <Plus className="size-4" />
                 Add employee
@@ -195,6 +200,8 @@ export function EmployeesPage() {
       <div className="hidden items-center gap-2 text-sm text-muted-foreground empty:hidden">
         <Users className="size-4" />
       </div>
+
+      <EmployeeImportDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }

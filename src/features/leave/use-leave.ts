@@ -41,6 +41,9 @@ export interface LeaveBalanceItem {
 export interface EmployeeOption {
   id: number;
   full_name: string;
+  current_assignment?: {
+    department?: { id: number; name: string } | null;
+  } | null;
 }
 
 export const leaveKeys = {

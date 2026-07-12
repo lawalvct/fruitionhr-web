@@ -55,9 +55,29 @@ export interface Shift {
   is_active: boolean;
 }
 
+export interface ShiftAssignmentRow {
+  employee: {
+    id: number;
+    employee_number: string;
+    name: string;
+    department: { id: number; name: string } | null;
+  };
+  assignment: {
+    id: number;
+    effective_from: string;
+    shift: {
+      id: number;
+      name: string;
+      start_time: string;
+      end_time: string;
+    };
+  } | null;
+}
+
 export const attendanceKeys = {
   grid: (period: string) => ["attendance", "grid", period] as const,
   shifts: ["attendance", "shifts"] as const,
+  shiftAssignments: ["attendance", "shift-assignments"] as const,
 };
 
 export function useAttendanceGrid(period: string) {
@@ -78,6 +98,39 @@ export function useShifts() {
     queryFn: async () => {
       const { data } = await api.get<{ data: Shift[] }>("/api/v1/shifts");
       return data.data;
+    },
+  });
+}
+
+export function useShiftAssignments(enabled = true) {
+  return useQuery({
+    queryKey: attendanceKeys.shiftAssignments,
+    enabled,
+    queryFn: async () => {
+      const { data } = await api.get<{ data: ShiftAssignmentRow[] }>("/api/v1/shift-assignments");
+      return data.data;
+    },
+  });
+}
+
+export interface ShiftAssignmentInput {
+  employee_id: number;
+  shift_id: number;
+  effective_from: string;
+}
+
+export function useAssignShift() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: ShiftAssignmentInput) => {
+      await ensureCsrf();
+      const { data } = await api.post("/api/v1/shift-assignments", input);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: attendanceKeys.shiftAssignments });
+      queryClient.invalidateQueries({ queryKey: ["attendance", "grid"] });
     },
   });
 }

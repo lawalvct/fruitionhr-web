@@ -136,6 +136,29 @@ export function useUploadEmployeePhoto() {
   });
 }
 
+export interface EmployeeImportResult {
+  imported: number;
+  skipped: number;
+  errors: string[];
+}
+
+export function useImportEmployees() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (file: File) => {
+      await ensureCsrf();
+      const form = new FormData();
+      form.append("file", file);
+      const { data } = await api.post<{ data: EmployeeImportResult }>("/api/v1/employees/import", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return data.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: employeeKeys.all }),
+  });
+}
+
 export function useAssignEmployee(id: number | string) {
   const queryClient = useQueryClient();
 

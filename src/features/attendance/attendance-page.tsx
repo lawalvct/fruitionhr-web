@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, ChevronLeft, ChevronRight, Clock, Lock, Plus, Upload } from "lucide-react";
+import { AlertTriangle, CalendarClock, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, Filter, Lock, Plus, RotateCcw, Timer, Upload, UserX, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -54,6 +54,7 @@ function daysInPeriod(period: string): string[] {
 
 export function AttendancePage() {
   const [period, setPeriod] = useState(currentPeriod());
+  const [department, setDepartment] = useState("");
   const { data: grid, isLoading } = useAttendanceGrid(period);
   const finalize = useFinalizePeriod(period);
 
@@ -65,6 +66,17 @@ export function AttendancePage() {
   const days = useMemo(() => daysInPeriod(period), [period]);
   const employees = grid?.rows.map((r) => r.employee) ?? [];
   const isFinalized = grid?.is_finalized ?? false;
+  const departments = useMemo(() => Array.from(new Set((grid?.rows ?? []).map((row) => row.employee.department).filter((item): item is string => Boolean(item)))).sort(), [grid?.rows]);
+  const visibleRows = useMemo(() => (grid?.rows ?? []).filter((row) => !department || row.employee.department === department), [department, grid?.rows]);
+  const totals = useMemo(() => visibleRows.reduce((total, row) => ({
+    present: total.present + (row.summary?.days_present ?? 0),
+    late: total.late + (row.summary?.days_late ?? 0),
+    absent: total.absent + (row.summary?.days_absent ?? 0),
+    leave: total.leave + (row.summary?.days_on_leave ?? 0),
+  }), { present: 0, late: 0, absent: 0, leave: 0 }), [visibleRows]);
+  const attendanceRate = totals.present + totals.absent + totals.leave > 0
+    ? Math.round((totals.present / (totals.present + totals.absent + totals.leave)) * 100)
+    : 0;
 
   const runFinalize = async () => {
     try {
@@ -100,18 +112,23 @@ export function AttendancePage() {
       />
 
       {/* Period navigator + finalize */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <section className="rounded-2xl border border-slate-200 bg-card p-4 shadow-sm sm:p-5 dark:border-slate-700">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon-sm" onClick={() => setPeriod(shiftPeriod(period, -1))} aria-label="Previous month">
             <ChevronLeft className="size-4" />
           </Button>
-          <span className="min-w-40 text-center text-sm font-semibold">{periodLabel(period)}</span>
+          <div className="min-w-40 text-center"><p className="text-xs uppercase tracking-wide text-muted-foreground">Attendance period</p><p className="text-sm font-semibold">{periodLabel(period)}</p></div>
           <Button variant="outline" size="icon-sm" onClick={() => setPeriod(shiftPeriod(period, 1))} aria-label="Next month">
             <ChevronRight className="size-4" />
           </Button>
+          <Button variant="ghost" size="sm" onClick={() => { setPeriod(currentPeriod()); setDepartment(""); }} disabled={period === currentPeriod() && department === ""}>
+            <RotateCcw className="size-3.5" /> Today
+          </Button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2"><Filter className="size-4 text-muted-foreground" /><select value={department} onChange={(event) => setDepartment(event.target.value)} className="h-9 rounded-lg border border-slate-300 bg-background px-3 text-sm dark:border-slate-600" aria-label="Filter by department"><option value="">All departments</option>{departments.map((item) => <option key={item} value={item}>{item}</option>)}</select></div>
           {isFinalized ? (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-fruition-50 px-3 py-1 text-xs font-semibold text-fruition-700 ring-1 ring-fruition-200">
               <Lock className="size-3" /> Finalized
@@ -125,17 +142,29 @@ export function AttendancePage() {
           )}
         </div>
       </div>
+      </section>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Employees", value: visibleRows.length, detail: department || "All departments", icon: Users, tone: "text-fruition-700 bg-fruition-50" },
+          { label: "Attendance rate", value: `${attendanceRate}%`, detail: "Present vs scheduled days", icon: CheckCircle2, tone: "text-fruition-700 bg-fruition-50" },
+          { label: "Late arrivals", value: totals.late, detail: "Recorded this month", icon: Timer, tone: "text-warning bg-warning/10" },
+          { label: "Absent days", value: totals.absent, detail: `${totals.leave} day${totals.leave === 1 ? "" : "s"} on leave`, icon: UserX, tone: "text-danger bg-danger/10" },
+        ].map((item) => <div key={item.label} className="rounded-xl border border-slate-200 bg-card p-4 shadow-sm dark:border-slate-700"><div className="flex items-start justify-between gap-3"><span className={`grid size-9 place-items-center rounded-lg ${item.tone}`}><item.icon className="size-4" /></span><span className="text-2xl font-bold tracking-tight">{item.value}</span></div><p className="mt-3 text-sm font-semibold">{item.label}</p><p className="mt-0.5 text-xs text-muted-foreground">{item.detail}</p></div>)}
+      </div>
+
+      {!isFinalized && <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-900"><AlertTriangle className="mt-0.5 size-4 shrink-0" /><p><span className="font-semibold">Month is open.</span> Review attendance and finalize it when the records are ready for payroll.</p></div>}
 
       {/* Grid */}
       {isLoading ? (
         <Skeleton className="h-64 w-full" />
       ) : !grid?.rows.length ? (
-        <p className="text-sm text-muted-foreground">
-          No employees to show. Add employees and assign shifts first.
-        </p>
+        <div className="rounded-2xl border border-dashed p-10 text-center"><CalendarDays className="mx-auto size-8 text-muted-foreground" /><p className="mt-3 text-sm font-semibold">No employees to show</p><p className="mt-1 text-sm text-muted-foreground">Add employees and assign shifts before recording attendance.</p></div>
+      ) : !visibleRows.length ? (
+        <div className="rounded-2xl border border-dashed p-10 text-center"><Filter className="mx-auto size-8 text-muted-foreground" /><p className="mt-3 text-sm font-semibold">No matching employees</p><p className="mt-1 text-sm text-muted-foreground">Try another department filter.</p></div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full border-collapse text-xs">
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-card shadow-sm dark:border-slate-700">
+          <table className="w-full min-w-[760px] border-collapse text-xs">
             <thead>
               <tr className="border-b bg-muted/50">
                 <th className="sticky left-0 z-10 bg-muted/50 px-3 py-2 text-left font-medium">
@@ -150,7 +179,7 @@ export function AttendancePage() {
               </tr>
             </thead>
             <tbody>
-              {grid.rows.map((row) => (
+                {visibleRows.map((row) => (
                 <tr key={row.employee.id} className="border-b last:border-0 hover:bg-muted/30">
                   <td className="sticky left-0 z-10 bg-background px-3 py-1.5 whitespace-nowrap">
                     <span className="font-medium">{row.employee.name}</span>
