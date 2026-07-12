@@ -18,7 +18,7 @@ export const companyKeys = {
   holidayCalendars: ["company", "holiday-calendars"] as const,
 };
 
-export function useCompanyOptions() {
+export function useCompanyOptions(departmentId?: number | null) {
   const branches = useQuery({
     queryKey: [...companyKeys.branches, "options"],
     queryFn: async () => {
@@ -50,10 +50,14 @@ export function useCompanyOptions() {
   });
 
   const positions = useQuery({
-    queryKey: [...companyKeys.positions, "options"],
+    queryKey: [...companyKeys.positions, "options", departmentId ?? "all"],
     queryFn: async () => {
       const { data } = await api.get<CollectionResponse<Position>>("/api/v1/positions", {
-        params: { per_page: 100, sort: "title" },
+        params: {
+          per_page: 100,
+          sort: "title",
+          ...(departmentId ? { "filter[department_id]": departmentId } : {}),
+        },
       });
       return data.data;
     },

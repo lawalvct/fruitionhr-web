@@ -151,19 +151,19 @@ function SidebarNav({
   );
 }
 
-function SidebarBrand({ title }: { title: string }) {
+function SidebarBrand({ title, companyName }: { title: string; companyName?: string }) {
   return (
     <div className="flex h-16 items-center gap-2.5 border-b border-white/10 px-4">
       <Image
         src="/fruitionhr-logo-icon.svg"
-        alt=""
+        alt="FruitionHR"
         width={34}
         height={34}
         className="rounded-lg"
         priority
       />
-      <span className="text-[15px] font-extrabold tracking-tight text-white">
-        {title}
+      <span className="hidden min-w-0 truncate text-[15px] font-extrabold tracking-tight text-white md:block">
+        {companyName ?? title}
       </span>
     </div>
   );
@@ -211,7 +211,7 @@ export function AppShell({
     <div className="flex min-h-screen bg-[#f8fafc]">
       {/* Desktop sidebar */}
       <aside className={cn("hidden w-62 shrink-0 flex-col md:flex", sidebarSurface)}>
-        <SidebarBrand title={title} />
+        <SidebarBrand title={title} companyName={me?.tenant?.name} />
         <SidebarNav items={visibleNav} pathname={pathname} />
 
         {/* user card */}
@@ -253,7 +253,7 @@ export function AppShell({
           className={cn("w-72 gap-0 border-white/10 p-0", sidebarSurface)}
         >
           <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <SidebarBrand title={title} />
+          <SidebarBrand title={title} companyName={me?.tenant?.name} />
           <SidebarNav
             items={visibleNav}
             pathname={pathname}
@@ -308,6 +308,13 @@ export function AppShell({
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
+        <footer className="border-t border-slate-200/70 bg-white/70 px-4 py-4 text-center text-xs text-slate-400 sm:px-6 lg:px-8">
+          <span className="font-semibold text-slate-500">FruitionHR</span>
+          <span className="mx-2">|</span>
+          <span>All rights reserved</span>
+          <span className="mx-2">|</span>
+          <span>Version 1.0.0</span>
+        </footer>
       </div>
     </div>
   );

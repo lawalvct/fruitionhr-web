@@ -16,6 +16,8 @@ import {
   Plane,
   Plus,
   Settings2,
+  Sparkles,
+  TrendingUp,
   Users,
   X,
   type LucideIcon,
@@ -25,6 +27,8 @@ import { useMe } from "@/features/auth/use-auth";
 import { useApprovals } from "@/features/approvals/use-approvals";
 import { useLeaveRequests } from "@/features/leave/use-leave";
 import {
+  type LatestPayrollRun,
+  type TodayAttendance,
   useAttendanceToday,
   useHeadcount,
   useLatestPayrollRun,
@@ -227,6 +231,64 @@ function greeting(): string {
 function periodLabel(period: string): string {
   const [y, m] = period.split("-").map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString("en-NG", { month: "long", year: "numeric" });
+}
+
+function AttendanceGraph({ attendance, loading }: { attendance: TodayAttendance | undefined; loading: boolean }) {
+  const values = [
+    { label: "Present", value: attendance?.present ?? 0, color: "bg-fruition-500" },
+    { label: "On leave", value: attendance?.onLeave ?? 0, color: "bg-amber-400" },
+    { label: "Absent", value: attendance?.absent ?? 0, color: "bg-slate-300" },
+  ];
+  const total = values.reduce((sum, item) => sum + item.value, 0);
+  const presentRate = total ? Math.round((values[0].value / total) * 100) : 0;
+
+  return (
+    <PanelCard title="Workforce pulse" action={<Link href="/attendance" className="inline-flex items-center gap-1 text-xs font-semibold text-fruition-700 hover:underline">Open attendance <ArrowUpRight className="size-3.5" /></Link>}>
+      {loading ? <Skeleton className="h-32 w-full" /> : total === 0 ? <EmptyHint icon={CalendarCheck2} text="Attendance data will appear here once your team checks in." /> : (
+        <div className="grid items-center gap-6 sm:grid-cols-[auto_1fr]">
+          <div className="relative grid size-32 place-items-center rounded-full" style={{ background: `conic-gradient(#22c55e 0 ${presentRate}%, #fbbf24 ${presentRate}% ${presentRate + (values[1].value / total) * 100}%, #cbd5e1 ${presentRate + (values[1].value / total) * 100}% 100%)` }}>
+            <div className="grid size-24 place-items-center rounded-full bg-white text-center shadow-inner">
+              <div><p className="text-2xl font-bold text-slate-900">{presentRate}%</p><p className="text-[11px] text-muted-foreground">present</p></div>
+            </div>
+          </div>
+          <div className="grid gap-3">
+            {values.map((item) => (
+              <div key={item.label} className="flex items-center justify-between gap-4 text-sm">
+                <span className="flex items-center gap-2 text-slate-600"><span className={cn("size-2.5 rounded-full", item.color)} />{item.label}</span>
+                <span className="font-semibold text-slate-900">{item.value}</span>
+              </div>
+            ))}
+            <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-fruition-500 transition-all" style={{ width: `${presentRate}%` }} /></div>
+          </div>
+        </div>
+      )}
+    </PanelCard>
+  );
+}
+
+function PayrollGraph({ payroll }: { payroll: LatestPayrollRun | null | undefined }) {
+  const gross = payroll?.total_gross ?? 0;
+  const net = payroll?.total_net ?? 0;
+  const statutory = Math.max(gross - net, 0);
+  const max = Math.max(gross, net, statutory, 1);
+  const bars = [
+    { label: "Gross", value: gross, color: "bg-fruition-500" },
+    { label: "Net pay", value: net, color: "bg-fruition-800" },
+    { label: "Deductions", value: statutory, color: "bg-amber-400" },
+  ];
+
+  return (
+    <PanelCard title="Payroll pulse" action={<Link href="/payroll" className="inline-flex items-center gap-1 text-xs font-semibold text-fruition-700 hover:underline">View runs <ArrowUpRight className="size-3.5" /></Link>}>
+      {!payroll ? <EmptyHint icon={Banknote} text="Run your first payroll to unlock payroll trends." /> : (
+        <div className="grid gap-4">
+          <div className="flex items-center justify-between"><div><p className="text-xs text-muted-foreground">Latest run</p><p className="mt-1 font-semibold text-slate-900">{periodLabel(payroll.period)}</p></div><span className="grid size-9 place-items-center rounded-xl bg-fruition-50 text-fruition-700"><TrendingUp className="size-4" /></span></div>
+          <div className="grid gap-3">
+            {bars.map((bar) => <div key={bar.label} className="grid grid-cols-[4.5rem_1fr_auto] items-center gap-3 text-xs"><span className="text-muted-foreground">{bar.label}</span><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className={cn("h-full rounded-full transition-all", bar.color)} style={{ width: `${Math.max((bar.value / max) * 100, 4)}%` }} /></div><span className="font-medium text-slate-700"><MoneyText kobo={bar.value} /></span></div>)}
+          </div>
+        </div>
+      )}
+    </PanelCard>
+  );
 }
 
 /* ── Page ────────────────────────────────────────────────────────────────── */
@@ -521,6 +583,58 @@ export default function TenantDashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Trends and assistant */}
+      <div className="grid items-start gap-4 lg:grid-cols-5">
+        {can("attendance.view") && (
+          <Rise index={8} className={can("payroll.view") ? "lg:col-span-3" : "lg:col-span-5"}>
+            <AttendanceGraph attendance={attendance.data} loading={attendance.isLoading} />
+          </Rise>
+        )}
+        {can("payroll.view") && (
+          <Rise index={9} className={can("attendance.view") ? "lg:col-span-2" : "lg:col-span-5"}>
+            <PayrollGraph payroll={payroll.data} />
+          </Rise>
+        )}
+      </div>
+
+      <Rise index={10}>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <PanelCard title="Daily workforce line chart" action={<Link href="/attendance" className="inline-flex items-center gap-1 text-xs font-semibold text-fruition-700 hover:underline">View details <ArrowUpRight className="size-3.5" /></Link>}>
+            <div className="grid gap-4">
+              <div className="flex items-center justify-between"><div><p className="text-xs text-muted-foreground">Today&apos;s attendance mix</p><p className="mt-1 text-lg font-bold text-slate-900">{attendance.data?.present ?? 0} present</p></div><span className="text-xs font-semibold text-fruition-700">{attendance.data ? `${Math.round((attendance.data.present / Math.max(attendance.data.present + attendance.data.onLeave + attendance.data.absent, 1)) * 100)}% attendance` : "Loading"}</span></div>
+              <div className="overflow-hidden rounded-xl border border-slate-100 bg-slate-50/70 px-2 pb-2 pt-4">
+                {attendance.isLoading ? <Skeleton className="h-44 w-full" /> : (() => {
+                  const points = [
+                    { label: "Present", value: attendance.data?.present ?? 0, color: "#16a34a" },
+                    { label: "On leave", value: attendance.data?.onLeave ?? 0, color: "#f59e0b" },
+                    { label: "Absent", value: attendance.data?.absent ?? 0, color: "#64748b" },
+                  ];
+                  const max = Math.max(...points.map((point) => point.value), 1);
+                  const coords = points.map((point, index) => ({ ...point, x: 32 + index * 118, y: 142 - (point.value / max) * 112 }));
+                  return <svg viewBox="0 0 300 180" className="h-44 w-full" role="img" aria-label="Attendance line chart"><line x1="32" y1="142" x2="268" y2="142" stroke="#cbd5e1" strokeWidth="1" /><line x1="32" y1="86" x2="268" y2="86" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" /><line x1="32" y1="30" x2="268" y2="30" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" /><polyline points={coords.map((point) => `${point.x},${point.y}`).join(" ")} fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /><polyline points={`32,${coords[0].y} ${coords.map((point) => `${point.x},${point.y}`).join(" ")} 268,142`} fill="#22c55e" fillOpacity="0.08" stroke="none" />{coords.map((point) => <g key={point.label}><circle cx={point.x} cy={point.y} r="5" fill="white" stroke={point.color} strokeWidth="3" /><text x={point.x} y="164" textAnchor="middle" fontSize="10" fill="#64748b">{point.label}</text><text x={point.x} y={Math.max(point.y - 10, 16)} textAnchor="middle" fontSize="11" fontWeight="600" fill="#0f172a">{point.value}</text></g>)}</svg>;
+                })()}
+              </div>
+            </div>
+          </PanelCard>
+          <PanelCard title="Suggested next steps" action={<Sparkles className="size-4 text-fruition-600" />}>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {[
+                { label: "Review approvals", detail: pendingApprovals.length ? `${pendingApprovals.length} item${pendingApprovals.length === 1 ? "" : "s"} waiting` : "No pending items", href: "/approvals", icon: ClipboardCheck },
+                { label: "Manage your team", detail: `${headcount.data ?? 0} active employees`, href: "/employees", icon: Users },
+                { label: "Check attendance", detail: "See today's workforce pulse", href: "/attendance", icon: CalendarCheck2 },
+                { label: "Open organisation", detail: "Keep company details current", href: "/settings/organisation", icon: Building2 },
+              ].map((item) => (
+                <Link key={item.label} href={item.href} className="group flex items-center gap-3 rounded-xl border border-slate-100 p-3 transition hover:border-fruition-200 hover:bg-fruition-50/40">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-fruition-50 text-fruition-700"><item.icon className="size-4" /></span>
+                  <span className="min-w-0"><span className="block text-sm font-semibold text-slate-800">{item.label}</span><span className="block truncate text-xs text-muted-foreground">{item.detail}</span></span>
+                  <ArrowUpRight className="ml-auto size-4 shrink-0 text-slate-300 transition group-hover:text-fruition-500" />
+                </Link>
+              ))}
+            </div>
+          </PanelCard>
+        </div>
+      </Rise>
 
       {/* Setup shortcuts */}
       {visibleSetupAreas.length > 0 && (

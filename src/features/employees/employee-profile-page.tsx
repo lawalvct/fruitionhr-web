@@ -1,10 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, MoveRight } from "lucide-react";
+import { ArrowLeft, MoveRight, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -12,14 +12,14 @@ import { Can } from "@/components/can";
 import { FormDialog } from "@/components/form-dialog";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { mapLaravelErrorsToForm, nullableNumber } from "@/lib/forms";
 import { DocumentsPanel } from "@/features/documents/documents-panel";
 import { CompensationTab } from "@/features/payroll/compensation-tab";
 import { useCompanyOptions } from "@/features/company/use-company";
-import { useAssignEmployee, useEmployee } from "@/features/employees/use-employees";
+import { useAssignEmployee, useEmployee, useEmployeePhoto } from "@/features/employees/use-employees";
 
 const tabs = ["Overview", "Employment history", "Contacts", "Bank & statutory", "Compensation", "Documents"] as const;
 
@@ -154,6 +154,14 @@ export function EmployeeProfilePage() {
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("Overview");
   const [assignmentOpen, setAssignmentOpen] = useState(false);
   const { data: employee, isLoading } = useEmployee(params.id);
+  const { data: photoBlob } = useEmployeePhoto(employee?.photo_url);
+  const photoUrl = useMemo(() => (photoBlob ? URL.createObjectURL(photoBlob) : null), [photoBlob]);
+
+  useEffect(() => {
+    return () => {
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+    };
+  }, [photoUrl]);
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Loading employee...</p>;
@@ -166,47 +174,56 @@ export function EmployeeProfilePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={employee.full_name}
+        title="Employee profile"
         description={`${employee.employee_number} · ${employee.current_assignment?.department?.name ?? "No department"}`}
         actions={
-          <Button variant="outline" render={<Link href="/employees" />}>
-            <ArrowLeft className="size-4" />
-            Employees
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Can permission="employees.update">
+              <Button variant="outline" render={<Link href={`/employees/${employee.id}/edit`} />}>
+                <Pencil className="size-4" /> Edit
+              </Button>
+            </Can>
+            <Button variant="outline" render={<Link href="/employees" />}>
+              <ArrowLeft className="size-4" /> Employees
+            </Button>
+          </div>
         }
       />
 
-      <section className="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <Avatar className="size-14">
-            <AvatarFallback>{initials(employee.full_name)}</AvatarFallback>
-          </Avatar>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="font-heading text-xl font-semibold">{employee.full_name}</h2>
-              <StatusBadge status={employee.employment_status} />
+      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-card p-5 shadow-sm sm:p-6 dark:border-slate-700">
+        <div className="pointer-events-none absolute -right-16 -top-20 size-48 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <Avatar size="lg" className="size-24 border-4 border-background shadow-lg ring-2 ring-primary/20">
+              {photoUrl && <AvatarImage src={photoUrl} alt={employee.full_name} />}
+              <AvatarFallback>{initials(employee.full_name)}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="truncate font-heading text-2xl font-semibold tracking-tight">{employee.full_name}</h2>
+                <StatusBadge status={employee.employment_status} />
+              </div>
+              <p className="mt-1 text-sm font-medium text-primary">{employee.current_assignment?.position?.title ?? "No position"}</p>
+              <p className="mt-1 text-sm text-muted-foreground">Hired {employee.hired_at} · {employee.country ?? "Location not set"}</p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              {employee.current_assignment?.position?.title ?? "No position"} · Hired {employee.hired_at}
-            </p>
           </div>
+          <Can permission="employees.update">
+            <Button type="button" onClick={() => setAssignmentOpen(true)}>
+              <MoveRight className="size-4" />
+              Transfer
+            </Button>
+          </Can>
         </div>
-        <Can permission="employees.update">
-          <Button type="button" onClick={() => setAssignmentOpen(true)}>
-            <MoveRight className="size-4" />
-            Transfer
-          </Button>
-        </Can>
       </section>
 
-      <div className="flex gap-1 overflow-x-auto border-b">
+      <div className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-muted/30 p-1 dark:border-slate-700">
         {tabs.map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => setActiveTab(tab)}
-            className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium ${
-              activeTab === tab ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+            className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition ${
+              activeTab === tab ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
             }`}
           >
             {tab}
@@ -215,13 +232,15 @@ export function EmployeeProfilePage() {
       </div>
 
       {activeTab === "Overview" && (
-        <dl className="grid gap-4 text-sm md:grid-cols-3">
-          <div><dt className="text-muted-foreground">Official email</dt><dd>{employee.official_email ?? "-"}</dd></div>
-          <div><dt className="text-muted-foreground">Phone</dt><dd>{employee.phone ?? "-"}</dd></div>
-          <div><dt className="text-muted-foreground">Location</dt><dd>{[employee.city, employee.state].filter(Boolean).join(", ") || "-"}</dd></div>
-          <div><dt className="text-muted-foreground">Branch</dt><dd>{employee.current_assignment?.branch?.name ?? "-"}</dd></div>
-          <div><dt className="text-muted-foreground">Department</dt><dd>{employee.current_assignment?.department?.name ?? "-"}</dd></div>
-          <div><dt className="text-muted-foreground">Employment type</dt><dd>{employee.current_assignment?.employment_type?.name ?? "-"}</dd></div>
+        <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            ["Official email", employee.official_email],
+            ["Phone", employee.phone],
+            ["Location", [employee.city, employee.state, employee.country].filter(Boolean).join(", ")],
+            ["Branch", employee.current_assignment?.branch?.name],
+            ["Department", employee.current_assignment?.department?.name],
+            ["Employment type", employee.current_assignment?.employment_type?.name],
+          ].map(([label, value]) => <div key={label} className="rounded-xl border border-slate-200 bg-card p-4 shadow-sm dark:border-slate-700"><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt><dd className="mt-2 truncate text-sm font-semibold text-foreground">{value || "-"}</dd></div>)}
         </dl>
       )}
 

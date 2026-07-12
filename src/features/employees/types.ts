@@ -62,7 +62,9 @@ export interface Employee {
   address: string | null;
   city: string | null;
   state: string | null;
+  country: string | null;
   photo_path: string | null;
+  photo_url: string | null;
   employment_status: "active" | "on_leave" | "suspended" | "exited";
   hired_at: string;
   exited_at: string | null;

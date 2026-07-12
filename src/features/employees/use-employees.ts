@@ -27,6 +27,7 @@ export interface EmployeeInput {
   address?: string;
   city?: string;
   state?: string;
+  country?: string;
   employment_status: Employee["employment_status"];
   hired_at: string;
   assignment?: {
@@ -71,6 +72,18 @@ export function useEmployee(id: string) {
   });
 }
 
+export function useEmployeePhoto(photoUrl: string | null | undefined) {
+  return useQuery({
+    queryKey: ["employees", "photo", photoUrl],
+    enabled: Boolean(photoUrl),
+    queryFn: async () => {
+      const { data } = await api.get<Blob>(photoUrl!, { responseType: "blob" });
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useCreateEmployee() {
   const queryClient = useQueryClient();
 
@@ -78,6 +91,42 @@ export function useCreateEmployee() {
     mutationFn: async (input: EmployeeInput) => {
       await ensureCsrf();
       const { data } = await api.post<ResourceResponse<Employee>>("/api/v1/employees", input);
+      return data.data;
+    },
+    onSuccess: (employee) => {
+      queryClient.invalidateQueries({ queryKey: employeeKeys.all });
+      queryClient.setQueryData(employeeKeys.detail(employee.id), employee);
+    },
+  });
+}
+
+export function useUpdateEmployee(id: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: Partial<EmployeeInput>) => {
+      await ensureCsrf();
+      const { data } = await api.put<ResourceResponse<Employee>>(`/api/v1/employees/${id}`, input);
+      return data.data;
+    },
+    onSuccess: (employee) => {
+      queryClient.invalidateQueries({ queryKey: employeeKeys.all });
+      queryClient.setQueryData(employeeKeys.detail(employee.id), employee);
+    },
+  });
+}
+
+export function useUploadEmployeePhoto() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ employeeId, photo }: { employeeId: number; photo: File }) => {
+      await ensureCsrf();
+      const form = new FormData();
+      form.append("photo", photo);
+      const { data } = await api.post<ResourceResponse<Employee>>(`/api/v1/employees/${employeeId}/photo`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       return data.data;
     },
     onSuccess: (employee) => {
