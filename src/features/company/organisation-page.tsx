@@ -17,6 +17,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { OnboardingPreferences } from "@/features/onboarding/onboarding-preferences";
 import { mapLaravelErrorsToForm, nullableNumber } from "@/lib/forms";
 import type {
   Branch,
@@ -42,6 +43,7 @@ const tabs = [
   { id: "grades", label: "Grades" },
   { id: "employment-types", label: "Employment types" },
   { id: "holidays", label: "Holidays" },
+  { id: "preferences", label: "Preferences" },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -678,7 +680,7 @@ export function OrganisationPage() {
     <div className="space-y-6">
       <PageHeader
         title="Organisation settings"
-        description="Manage the master data used across employee records, attendance, leave, and payroll."
+        description="Manage company structure, work defaults, and the master data used across employee records, attendance, leave, and payroll."
       />
 
       <div className="flex gap-1 overflow-x-auto border-b">
@@ -773,6 +775,8 @@ export function OrganisationPage() {
           renderForm={({ formId, record, onSubmit }) => <HolidayForm formId={formId} record={record} onSubmit={onSubmit} />}
         />
       )}
+
+      {activeTab === "preferences" && <OnboardingPreferences />}
     </div>
   );
 }

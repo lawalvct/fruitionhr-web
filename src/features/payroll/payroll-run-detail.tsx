@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Download, FileText, Lock, RotateCcw, Scale, Send } from "lucide-react";
+import { ArrowLeft, Download, FileText, Lock, RotateCcw, Scale, Search, Send } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -28,7 +28,7 @@ import {
   useReversePayrollRun,
 } from "@/features/payroll/use-payroll";
 import { VarianceSheet } from "@/features/payroll/variance-sheet";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 function periodLabel(period: string) {
   const [y, m] = period.split("-").map(Number);
@@ -37,16 +37,50 @@ function periodLabel(period: string) {
 
 const DOWNLOADABLE = ["approved", "locked", "paid"];
 
+function nextStep(status: string) {
+  const steps: Record<string, string> = {
+    calculating: "Payroll lines are being calculated. This page updates automatically when they are ready.",
+    review: "Review employee figures, then submit the run for approval.",
+    submitted: "This run is awaiting approval before it can be locked.",
+    approved: "Approval is complete. Lock the run to make reports and payslips final.",
+    locked: "This payroll is locked. Reports and employee payslips are ready to download.",
+    paid: "This payroll has been paid and remains available for audit and reporting.",
+    reversed: "This payroll was reversed and no longer contributes to payroll totals.",
+  };
+
+  return steps[status] ?? "Review the payroll run and complete the next available action.";
+}
+
 export function PayrollRunDetail({ runId }: { runId: number }) {
-  const { data: run, isLoading } = usePayrollRun(runId);
+  const { data: run, isLoading, isError, isFetching, refetch } = usePayrollRun(runId);
   const action = usePayrollAction(runId);
   const reverse = useReversePayrollRun(runId);
   const [lockOpen, setLockOpen] = useState(false);
   const [varianceOpen, setVarianceOpen] = useState(false);
   const [reverseOpen, setReverseOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const [employeeQuery, setEmployeeQuery] = useState("");
+  const filteredEmployees = useMemo(() => {
+    const query = employeeQuery.trim().toLowerCase();
+    const employees = run?.employees ?? [];
+    if (!query) return employees;
+    return employees.filter((row) => `${row.employee.name} ${row.employee.number}`.toLowerCase().includes(query));
+  }, [employeeQuery, run?.employees]);
 
-  if (isLoading || !run) return <Skeleton className="h-64 w-full" />;
+  if (isLoading) return <Skeleton className="h-64 w-full" />;
+
+  if (isError || !run) {
+    return (
+      <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+        <h1 className="font-semibold">Payroll run unavailable</h1>
+        <p className="mt-1 text-sm text-muted-foreground">The payroll run could not be loaded. It may no longer exist or your access may have changed.</p>
+        <div className="mt-4 flex justify-center gap-2">
+          <Button variant="outline" render={<Link href="/payroll" />}>All runs</Button>
+          <Button onClick={() => void refetch()} disabled={isFetching}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
 
   const canDownload = DOWNLOADABLE.includes(run.status);
   const canReverse = ["locked", "paid"].includes(run.status) && !run.is_reversal;
@@ -93,6 +127,7 @@ export function PayrollRunDetail({ runId }: { runId: number }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <StatusBadge status={run.status} />
+          <p className="max-w-xl text-sm text-muted-foreground">{nextStep(run.status)}</p>
           {run.status === "calculating" && (
             <span className="text-sm text-muted-foreground">Calculating…</span>
           )}
@@ -141,11 +176,12 @@ export function PayrollRunDetail({ runId }: { runId: number }) {
       )}
 
       {/* Stat tiles */}
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {[
           { label: "Employees", value: run.employee_count, money: false },
-          { label: "Gross", value: run.total_gross, money: true },
-          { label: "Deductions", value: run.total_deductions, money: true },
+          { label: "Gross pay", value: run.total_gross, money: true },
+          { label: "Statutory", value: run.total_statutory, money: true },
+          { label: "Other deductions", value: run.total_deductions, money: true },
           { label: "Net pay", value: run.total_net, money: true, highlight: true },
         ].map((tile) => (
           <div key={tile.label} className="rounded-xl border bg-card p-4">
@@ -184,9 +220,20 @@ export function PayrollRunDetail({ runId }: { runId: number }) {
         </div>
       )}
 
-      {/* Employee lines */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="font-semibold">Employee payroll lines</h2>
+          <p className="text-sm text-muted-foreground">{filteredEmployees.length} of {run.employees?.length ?? 0} employees shown</p>
+        </div>
+        <div className="relative w-full sm:max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={employeeQuery} onChange={(event) => setEmployeeQuery(event.target.value)} placeholder="Search employee or number" className="pl-9" aria-label="Search payroll employees" />
+        </div>
+      </div>
+
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
+          <caption className="sr-only">Employee payroll lines for {periodLabel(run.period)}</caption>
           <thead>
             <tr className="border-b bg-muted/50 text-left">
               <th className="px-4 py-2 font-medium">Employee</th>
@@ -198,7 +245,7 @@ export function PayrollRunDetail({ runId }: { runId: number }) {
             </tr>
           </thead>
           <tbody>
-            {run.employees?.map((row) => (
+            {filteredEmployees.map((row) => (
               <tr key={row.id} className="border-b last:border-0">
                 <td className="px-4 py-2">
                   <span className="font-medium">{row.employee.name}</span>
@@ -222,6 +269,7 @@ export function PayrollRunDetail({ runId }: { runId: number }) {
                 )}
               </tr>
             ))}
+            {filteredEmployees.length === 0 && <tr><td colSpan={canDownload ? 6 : 5} className="px-4 py-10 text-center text-sm text-muted-foreground">No employee payroll lines match this search.</td></tr>}
           </tbody>
         </table>
       </div>

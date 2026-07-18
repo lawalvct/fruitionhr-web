@@ -1,6 +1,6 @@
 'use client';
 
-import { BriefcaseBusiness, Copy, ExternalLink, Globe2, LockKeyhole, Plus, Send } from 'lucide-react';
+import { BriefcaseBusiness, Copy, ExternalLink, Globe2, LockKeyhole, Plus, Search, Send } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -28,18 +28,36 @@ function Empty({ children }: { children: React.ReactNode }) {
   return <p className='rounded-md border border-dashed px-4 py-10 text-center text-sm text-muted-foreground'>{children}</p>;
 }
 
+function Metric({ label, value, detail }: { label: string; value: number; detail: string }) {
+  return <div className='rounded-lg border bg-card p-4 shadow-sm'><p className='text-sm text-muted-foreground'>{label}</p><p className='mt-1 text-2xl font-semibold tracking-tight'>{value}</p><p className='mt-1 text-xs text-muted-foreground'>{detail}</p></div>;
+}
+
+function formatDate(value: string | null) {
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 export function RecruitmentPage() {
   const [tab, setTab] = useState<Tab>('Requisitions');
   const [requisitionOpen, setRequisitionOpen] = useState(false);
   const [vacancyOpen, setVacancyOpen] = useState(false);
   const [candidateOpen, setCandidateOpen] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<number | null>(null);
+  const [query, setQuery] = useState('');
   const { data: requisitions = [], isLoading: requisitionsLoading } = useRequisitions();
   const { data: vacancies = [], isLoading: vacanciesLoading } = useVacancies();
   const { data: applications = [], isLoading: applicationsLoading } = useApplications();
   const submitRequisition = useSubmitRequisition();
   const vacancyAction = useVacancyAction();
   const visibilityAction = useVacancyVisibilityAction();
+  const searchTerm = query.trim().toLowerCase();
+  const filteredRequisitions = requisitions.filter((item) => `${item.title} ${item.department?.name ?? ''} ${item.status}`.toLowerCase().includes(searchTerm));
+  const filteredVacancies = vacancies.filter((item) => `${item.title} ${item.code ?? ''} ${item.location ?? ''} ${item.status} ${item.visibility}`.toLowerCase().includes(searchTerm));
+  const filteredApplications = applications.filter((item) => `${item.applicant.name} ${item.applicant.email} ${item.vacancy.title} ${item.stage}`.toLowerCase().includes(searchTerm));
+  const pendingRequisitions = requisitions.filter((item) => item.status === 'pending').length;
+  const openVacancies = vacancies.filter((item) => item.status === 'open').length;
+  const lateStageCandidates = applications.filter((item) => item.stage === 'offer' || item.stage === 'accepted').length;
 
   async function run(action: () => Promise<unknown>, success: string) {
     try {
@@ -75,22 +93,43 @@ export function RecruitmentPage() {
   return (
     <div className='space-y-6'>
       <PageHeader title='Recruitment' description='Manage approved headcount, vacancies, candidates, offers, and onboarding.' actions={action} />
-      <div className='flex gap-1 border-b'>
+      <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
+        <Metric label='Open vacancies' value={openVacancies} detail='Roles currently accepting candidates' />
+        <Metric label='Candidates' value={applications.length} detail='Across every hiring stage' />
+        <Metric label='Late-stage candidates' value={lateStageCandidates} detail='At offer or accepted stage' />
+        <Metric label='Pending requisitions' value={pendingRequisitions} detail='Awaiting headcount approval' />
+      </div>
+
+      <div role='tablist' aria-label='Recruitment sections' className='flex gap-1 overflow-x-auto border-b'>
         {tabs.map((item) => (
           <button
             key={item}
+            id={`recruitment-tab-${item.toLowerCase()}`}
             type='button'
-            onClick={() => setTab(item)}
-            className={'border-b-2 px-3 py-2 text-sm font-medium ' + (tab === item ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}
+            role='tab'
+            aria-selected={tab === item}
+            aria-controls={`recruitment-panel-${item.toLowerCase()}`}
+            onClick={() => {
+              setTab(item);
+              setQuery('');
+            }}
+            className={'border-b-2 px-3 py-2 text-sm font-medium transition-colors ' + (tab === item ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}
           >
             {item}
           </button>
         ))}
       </div>
 
+      <div className='relative max-w-md'>
+        <Search className='pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground' />
+        <input value={query} onChange={(event) => setQuery(event.target.value)} className='h-9 w-full rounded-md border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/25' placeholder={`Search ${tab.toLowerCase()}`} aria-label={`Search ${tab.toLowerCase()}`} />
+      </div>
+
       {tab === 'Requisitions' && (
-        requisitionsLoading ? <p className='text-sm text-muted-foreground'>Loading requisitions...</p> :
+        <section id='recruitment-panel-requisitions' role='tabpanel' aria-labelledby='recruitment-tab-requisitions'>
+        {requisitionsLoading ? <p className='text-sm text-muted-foreground'>Loading requisitions...</p> :
         requisitions.length === 0 ? <Empty>No manpower requisitions yet.</Empty> :
+        <>
         <div className='overflow-x-auto rounded-md border'>
           <table className='w-full text-sm'>
             <thead><tr className='border-b bg-muted/50 text-left'>
@@ -102,15 +141,15 @@ export function RecruitmentPage() {
               <th className='w-12 px-4 py-2'><span className='sr-only'>Actions</span></th>
             </tr></thead>
             <tbody>
-              {requisitions.map((item) => (
+              {filteredRequisitions.map((item) => (
                 <tr key={item.id} className='border-b last:border-0'>
                   <td className='px-4 py-3'>
                     <p className='font-medium'>{item.title}</p>
-                    <p className='max-w-xs truncate text-xs text-muted-foreground'>{item.reason}</p>
+                    {item.reason && <p className='max-w-xs truncate text-xs text-muted-foreground'>{item.reason}</p>}
                   </td>
                   <td className='px-4 py-3'>{item.department?.name ?? '-'}</td>
                   <td className='px-4 py-3 text-right'>{item.headcount}</td>
-                  <td className='px-4 py-3'>{item.target_start_date ?? '-'}</td>
+                  <td className='whitespace-nowrap px-4 py-3'>{formatDate(item.target_start_date)}</td>
                   <td className='px-4 py-3'><StatusBadge status={item.status} /></td>
                   <td className='px-4 py-3'>
                     {item.status === 'draft' && (
@@ -126,11 +165,16 @@ export function RecruitmentPage() {
             </tbody>
           </table>
         </div>
+        {filteredRequisitions.length === 0 && <Empty>No requisitions match this search.</Empty>}
+        </>}
+        </section>
       )}
 
       {tab === 'Vacancies' && (
-        vacanciesLoading ? <p className='text-sm text-muted-foreground'>Loading vacancies...</p> :
+        <section id='recruitment-panel-vacancies' role='tabpanel' aria-labelledby='recruitment-tab-vacancies'>
+        {vacanciesLoading ? <p className='text-sm text-muted-foreground'>Loading vacancies...</p> :
         vacancies.length === 0 ? <Empty>No vacancies have been created from approved requisitions.</Empty> :
+        <>
         <div className='overflow-x-auto rounded-md border'>
           <table className='w-full text-sm'>
             <thead><tr className='border-b bg-muted/50 text-left'>
@@ -143,7 +187,7 @@ export function RecruitmentPage() {
               <th className='px-4 py-2 text-right font-medium'>Action</th>
             </tr></thead>
             <tbody>
-              {vacancies.map((item) => (
+              {filteredVacancies.map((item) => (
                 <tr key={item.id} className='border-b last:border-0'>
                   <td className='px-4 py-3'><p className='font-medium'>{item.title}</p><p className='text-xs text-muted-foreground'>{item.code ?? item.requisition.title}</p></td>
                   <td className='px-4 py-3'>{item.location ?? '-'}</td>
@@ -183,8 +227,8 @@ export function RecruitmentPage() {
                             {item.visibility === 'public' ? <LockKeyhole className='size-4' /> : <Globe2 className='size-4' />}
                           </Button>
                         )}
-                        {item.status === 'draft' && <Button size='sm' variant='outline' onClick={() => run(() => vacancyAction.mutateAsync({ id: item.id, action: 'open' }), item.visibility === 'public' ? 'Vacancy opened and is live.' : 'Vacancy opened.')}>Open</Button>}
-                        {item.status === 'open' && <Button size='sm' variant='outline' onClick={() => run(() => vacancyAction.mutateAsync({ id: item.id, action: 'close' }), 'Vacancy closed.')}>Close</Button>}
+                        {item.status === 'draft' && <Button size='sm' variant='outline' disabled={vacancyAction.isPending} onClick={() => run(() => vacancyAction.mutateAsync({ id: item.id, action: 'open' }), item.visibility === 'public' ? 'Vacancy opened and is live.' : 'Vacancy opened.')}>Open</Button>}
+                        {item.status === 'open' && <Button size='sm' variant='outline' disabled={vacancyAction.isPending} onClick={() => run(() => vacancyAction.mutateAsync({ id: item.id, action: 'close' }), 'Vacancy closed.')}>Close</Button>}
                       </div>
                     </Can>
                   </td>
@@ -193,10 +237,14 @@ export function RecruitmentPage() {
             </tbody>
           </table>
         </div>
+        {filteredVacancies.length === 0 && <Empty>No vacancies match this search.</Empty>}
+        </>}
+        </section>
       )}
 
       {tab === 'Candidates' && (
-        applicationsLoading ? <p className='text-sm text-muted-foreground'>Loading candidates...</p> :
+        <section id='recruitment-panel-candidates' role='tabpanel' aria-labelledby='recruitment-tab-candidates'>
+        {applicationsLoading ? <p className='text-sm text-muted-foreground'>Loading candidates...</p> :
         applications.length === 0 ? (
           <Empty><span className='inline-flex items-center gap-2'><BriefcaseBusiness className='size-4' />No candidates are in the pipeline.</span></Empty>
         ) : (
@@ -211,13 +259,13 @@ export function RecruitmentPage() {
                 <th className='w-12 px-4 py-2'><span className='sr-only'>Open</span></th>
               </tr></thead>
               <tbody>
-                {applications.map((item) => (
+                {filteredApplications.map((item) => (
                   <tr key={item.id} className='border-b last:border-0'>
                     <td className='px-4 py-3'><p className='font-medium'>{item.applicant.name}</p><p className='text-xs text-muted-foreground'>{item.applicant.email}</p></td>
                     <td className='px-4 py-3'>{item.vacancy.title}</td>
                     <td className='px-4 py-3'>{item.source ?? '-'}</td>
                     <td className='px-4 py-3'><StatusBadge status={item.stage} /></td>
-                    <td className='px-4 py-3'>{new Date(item.applied_at).toLocaleDateString('en-NG')}</td>
+                    <td className='whitespace-nowrap px-4 py-3'>{formatDate(item.applied_at)}</td>
                     <td className='px-4 py-3'>
                       <Button size='icon-sm' variant='ghost' title='Open candidate' onClick={() => setSelectedApplication(item.id)}>
                         <ExternalLink className='size-4' />
@@ -228,7 +276,9 @@ export function RecruitmentPage() {
               </tbody>
             </table>
           </div>
-        )
+        )}
+        {applications.length > 0 && filteredApplications.length === 0 && <Empty>No candidates match this search.</Empty>}
+        </section>
       )}
 
       <RequisitionForm open={requisitionOpen} onOpenChange={setRequisitionOpen} />
