@@ -1,6 +1,6 @@
 'use client';
 
-import { BriefcaseBusiness, ExternalLink, Plus, Send } from 'lucide-react';
+import { BriefcaseBusiness, Copy, ExternalLink, Globe2, LockKeyhole, Plus, Send } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -16,8 +16,10 @@ import {
   useSubmitRequisition,
   useVacancies,
   useVacancyAction,
+  useVacancyVisibilityAction,
 } from '@/features/recruitment/use-recruitment';
 import { apiErrorMessage } from '@/lib/api';
+import { publicVacancyUrl } from '@/lib/site';
 
 const tabs = ['Requisitions', 'Vacancies', 'Candidates'] as const;
 type Tab = (typeof tabs)[number];
@@ -37,6 +39,7 @@ export function RecruitmentPage() {
   const { data: applications = [], isLoading: applicationsLoading } = useApplications();
   const submitRequisition = useSubmitRequisition();
   const vacancyAction = useVacancyAction();
+  const visibilityAction = useVacancyVisibilityAction();
 
   async function run(action: () => Promise<unknown>, success: string) {
     try {
@@ -44,6 +47,15 @@ export function RecruitmentPage() {
       toast.success(success);
     } catch (error) {
       toast.error(apiErrorMessage(error));
+    }
+  }
+
+  async function copyPublicLink(slug: string) {
+    try {
+      await navigator.clipboard.writeText(publicVacancyUrl(slug));
+      toast.success('Public vacancy link copied.');
+    } catch {
+      toast.error('The public link could not be copied.');
     }
   }
 
@@ -127,6 +139,7 @@ export function RecruitmentPage() {
               <th className='px-4 py-2 text-right font-medium'>Openings</th>
               <th className='px-4 py-2 text-right font-medium'>Candidates</th>
               <th className='px-4 py-2 font-medium'>Status</th>
+              <th className='px-4 py-2 font-medium'>Visibility</th>
               <th className='px-4 py-2 text-right font-medium'>Action</th>
             </tr></thead>
             <tbody>
@@ -137,10 +150,42 @@ export function RecruitmentPage() {
                   <td className='px-4 py-3 text-right'>{item.positions_available}</td>
                   <td className='px-4 py-3 text-right'>{item.applications_count}</td>
                   <td className='px-4 py-3'><StatusBadge status={item.status} /></td>
+                  <td className='px-4 py-3'>
+                    <span className='inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground'>
+                      {item.visibility === 'public' ? <Globe2 className='size-3.5 text-emerald-600' /> : <LockKeyhole className='size-3.5' />}
+                      {item.visibility === 'public' ? 'Public' : 'Private'}
+                    </span>
+                  </td>
                   <td className='px-4 py-3 text-right'>
                     <Can permission='recruitment.manage'>
-                      {item.status === 'draft' && <Button size='sm' variant='outline' onClick={() => run(() => vacancyAction.mutateAsync({ id: item.id, action: 'open' }), 'Vacancy opened.')}>Open</Button>}
-                      {item.status === 'open' && <Button size='sm' variant='outline' onClick={() => run(() => vacancyAction.mutateAsync({ id: item.id, action: 'close' }), 'Vacancy closed.')}>Close</Button>}
+                      <div className='flex justify-end gap-1'>
+                        {item.visibility === 'public' && item.public_slug && (
+                          <>
+                            <Button size='icon-sm' variant='ghost' title='Copy public link' onClick={() => copyPublicLink(item.public_slug!)}>
+                              <Copy className='size-4' />
+                            </Button>
+                            <Button size='icon-sm' variant='ghost' title='Open public vacancy' render={<a href={publicVacancyUrl(item.public_slug)} target='_blank' rel='noreferrer' />}>
+                              <ExternalLink className='size-4' />
+                            </Button>
+                          </>
+                        )}
+                        {item.status !== 'closed' && (
+                          <Button
+                            size='icon-sm'
+                            variant='ghost'
+                            title={item.visibility === 'public' ? 'Make vacancy private' : 'Publish vacancy'}
+                            disabled={visibilityAction.isPending}
+                            onClick={() => run(
+                              () => visibilityAction.mutateAsync({ id: item.id, action: item.visibility === 'public' ? 'unpublish' : 'publish' }),
+                              item.visibility === 'public' ? 'Vacancy is now private.' : 'Vacancy published.',
+                            )}
+                          >
+                            {item.visibility === 'public' ? <LockKeyhole className='size-4' /> : <Globe2 className='size-4' />}
+                          </Button>
+                        )}
+                        {item.status === 'draft' && <Button size='sm' variant='outline' onClick={() => run(() => vacancyAction.mutateAsync({ id: item.id, action: 'open' }), item.visibility === 'public' ? 'Vacancy opened and is live.' : 'Vacancy opened.')}>Open</Button>}
+                        {item.status === 'open' && <Button size='sm' variant='outline' onClick={() => run(() => vacancyAction.mutateAsync({ id: item.id, action: 'close' }), 'Vacancy closed.')}>Close</Button>}
+                      </div>
                     </Can>
                   </td>
                 </tr>

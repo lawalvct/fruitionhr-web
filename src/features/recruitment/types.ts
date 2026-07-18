@@ -20,6 +20,8 @@ export interface Vacancy {
   id: number;
   title: string;
   code: string | null;
+  public_slug: string | null;
+  public_path: string | null;
   description: string;
   requirements: string | null;
   location: string | null;
@@ -27,8 +29,9 @@ export interface Vacancy {
   opens_at: string | null;
   closes_at: string | null;
   status: RecruitmentStatus;
+  visibility: 'public' | 'private';
   applications_count: number;
-  requisition: { id: number; title: string };
+  requisition: { id: number; title: string; position: { id: number; title: string } | null };
   employment_type: { id: number; name: string } | null;
 }
 
@@ -49,7 +52,19 @@ export interface RecruitmentApplication {
   stage: ApplicationStage;
   source: string | null;
   applied_at: string;
-  applicant: { id: number; name: string; first_name: string; last_name: string; email: string; phone: string | null; city: string | null; state: string | null };
+  applicant: {
+    id: number;
+    name: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string | null;
+    city: string | null;
+    state: string | null;
+    linkedin_url: string | null;
+    has_resume: boolean;
+    resume_file_name: string | null;
+  };
   vacancy: { id: number; title: string };
   stage_history?: Array<{ id: number; from_stage: string | null; to_stage: string; notes: string | null; created_at: string }>;
   interviews?: Array<{ id: number; type: string; scheduled_at: string; location: string | null; meeting_url: string | null; status: string }>;

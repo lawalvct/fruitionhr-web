@@ -361,7 +361,7 @@ export default function TenantDashboardPage() {
             <div>
               <p className="text-sm text-fruition-100/80">{todayLabel}</p>
               <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-[1.7rem]">
-                {greeting()}, {firstName} 👋
+                {greeting()}, {firstName} 
               </h1>
               <p className="mt-1 text-sm text-fruition-100/75">
                 Here&apos;s what&apos;s happening at {me?.tenant?.name} today.

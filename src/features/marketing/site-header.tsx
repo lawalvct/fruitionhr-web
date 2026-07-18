@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X } from "lucide-react";
 import { useState } from "react";
 
 import { appLink } from "@/lib/site";
@@ -13,6 +13,9 @@ import { Button } from "@/components/ui/button";
 const navLinks = [
   { href: "/features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/recruitment", label: "Recruitment" },
+  { href: "/blog", label: "Blog" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export function SiteHeader() {
@@ -20,8 +23,8 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-fruition-100 bg-white/85 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+    <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/90 backdrop-blur-xl">
+      <div className="mx-auto flex h-20 max-w-[1450px] items-center justify-between gap-4 px-5 sm:px-8 lg:px-12">
         <Link href="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
           <Image
             src="/fruitionhr-logo-icon.svg"
@@ -57,10 +60,10 @@ export function SiteHeader() {
             Sign in
           </Button>
           <Button
-            className="bg-linear-135 from-fruition-700 to-fruition-500 text-white shadow-sm hover:opacity-90"
+            className="h-11 rounded-xl bg-linear-135 from-fruition-800 to-fruition-600 px-5 text-white shadow-[0_10px_25px_rgba(4,120,87,0.18)] hover:opacity-90"
             render={<a href={appLink.register} />}
           >
-            Get started free
+            Get started free <ArrowRight className="size-4" />
           </Button>
         </div>
 

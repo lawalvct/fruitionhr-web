@@ -60,6 +60,7 @@ export const useCreateRequisition = () => useAction<Record<string, unknown>>((in
 export const useSubmitRequisition = () => useAction<number>((id) => api.post('/api/v1/recruitment/requisitions/' + id + '/submit'));
 export const useCreateVacancy = () => useAction<Record<string, unknown>>((input) => api.post('/api/v1/recruitment/vacancies', input));
 export const useVacancyAction = () => useAction<{ id: number; action: 'open' | 'close' }>(({ id, action }) => api.post('/api/v1/recruitment/vacancies/' + id + '/' + action));
+export const useVacancyVisibilityAction = () => useAction<{ id: number; action: 'publish' | 'unpublish' }>(({ id, action }) => api.post('/api/v1/recruitment/vacancies/' + id + '/' + action));
 export const useCreateApplication = () => useAction<Record<string, unknown>>((input) => api.post('/api/v1/recruitment/applications', input));
 export const useMoveApplication = () => useAction<{ id: number; stage: string; notes?: string }>(({ id, ...input }) => api.post('/api/v1/recruitment/applications/' + id + '/move', input));
 export const useScheduleInterview = () => useAction<{ id: number; input: Record<string, unknown> }>(({ id, input }) => api.post('/api/v1/recruitment/applications/' + id + '/interviews', input));

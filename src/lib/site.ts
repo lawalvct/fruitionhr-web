@@ -8,6 +8,7 @@ export const site = {
   description:
     "All-in-one HR & payroll platform for growing African businesses — employees, attendance, leave, payroll with PAYE/Pension/NHF/NSITF compliance, recruitment and performance in one system.",
   appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://app.fruitionhr.test:3000",
+  marketingUrl: process.env.NEXT_PUBLIC_MARKETING_URL ?? "http://localhost:3000",
   contactEmail: "hello@fruitionhr.com",
 } as const;
 
@@ -15,3 +16,7 @@ export const appLink = {
   register: `${site.appUrl}/register`,
   login: `${site.appUrl}/login`,
 } as const;
+
+export function publicVacancyUrl(slug: string): string {
+  return `${site.marketingUrl}/careers/${slug}`;
+}

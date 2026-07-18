@@ -1,5 +1,6 @@
 'use client';
 
+import { FileDown } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -19,7 +20,7 @@ import {
   useOfferAction,
   useScheduleInterview,
 } from '@/features/recruitment/use-recruitment';
-import { apiErrorMessage } from '@/lib/api';
+import { api, apiErrorMessage } from '@/lib/api';
 
 const selectClass = 'h-9 rounded-md border bg-background px-2 text-sm';
 
@@ -36,6 +37,7 @@ export function CandidateSheet({ applicationId, onOpenChange }: { applicationId:
   const [location, setLocation] = useState('');
   const [annualSalary, setAnnualSalary] = useState('');
   const [startDate, setStartDate] = useState('');
+  const [resumePending, setResumePending] = useState(false);
 
   async function run(action: () => Promise<unknown>, success: string) {
     try {
@@ -43,6 +45,24 @@ export function CandidateSheet({ applicationId, onOpenChange }: { applicationId:
       toast.success(success);
     } catch (error) {
       toast.error(apiErrorMessage(error));
+    }
+  }
+
+  async function downloadResume() {
+    if (!application) return;
+    setResumePending(true);
+    try {
+      const response = await api.get(`/api/v1/recruitment/applications/${application.id}/resume`, { responseType: 'blob' });
+      const url = URL.createObjectURL(response.data);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = application.applicant.resume_file_name ?? `${application.applicant.name}-resume`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error(apiErrorMessage(error));
+    } finally {
+      setResumePending(false);
     }
   }
 
@@ -60,6 +80,22 @@ export function CandidateSheet({ applicationId, onOpenChange }: { applicationId:
         {isLoading && <p className='px-4 text-sm text-muted-foreground'>Loading candidate...</p>}
         {application && (
           <div className='grid gap-6 px-4 pb-6'>
+            <section className='grid gap-3 border-b pb-5'>
+              <div className='flex flex-wrap items-start justify-between gap-3'>
+                <div className='text-sm'>
+                  <p>{application.applicant.email}</p>
+                  <p className='text-muted-foreground'>{application.applicant.phone ?? 'No phone number'}</p>
+                  {(application.applicant.city || application.applicant.state) && <p className='text-muted-foreground'>{[application.applicant.city, application.applicant.state].filter(Boolean).join(', ')}</p>}
+                </div>
+                {application.applicant.has_resume && (
+                  <Button size='sm' variant='outline' disabled={resumePending} onClick={downloadResume}>
+                    <FileDown className='size-4' />
+                    {resumePending ? 'Downloading...' : 'Resume'}
+                  </Button>
+                )}
+              </div>
+              {application.applicant.linkedin_url && <a className='text-sm font-medium text-primary hover:underline' href={application.applicant.linkedin_url} target='_blank' rel='noreferrer'>LinkedIn profile</a>}
+            </section>
             <section className='grid gap-3 border-b pb-5'>
               <div className='flex items-center justify-between'>
                 <h3 className='text-sm font-semibold'>Pipeline stage</h3>

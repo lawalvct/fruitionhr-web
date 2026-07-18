@@ -7,8 +7,10 @@ import {
   CalendarDays,
   ClipboardCheck,
   Gauge,
+  HandCoins,
   LayoutDashboard,
   Settings,
+  Timer,
   UserRound,
   Users,
 } from "lucide-react";
@@ -30,6 +32,8 @@ const nav: NavItem[] = [
   { group: "People", href: "/performance", label: "Performance", icon: Gauge, permission: ["performance.view", "performance.review", "goals.view"] },
 
   { group: "Money", href: "/payroll", label: "Payroll", icon: Banknote, permission: "payroll.view" },
+  { group: "Money", href: "/overtime", label: "Overtime", icon: Timer, permission: "overtime.view" },
+  { group: "Money", href: "/loans", label: "Loans & advances", icon: HandCoins, permission: "loans.view" },
 
   { group: "Company", href: "/settings/organisation", label: "Settings", icon: Settings, permission: "company.view" },
 ];

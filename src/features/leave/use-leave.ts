@@ -50,15 +50,19 @@ export const leaveKeys = {
   types: ["leave", "types"] as const,
   requests: (filters?: Record<string, unknown>) => ["leave", "requests", filters ?? {}] as const,
   balances: (year: number, employeeId?: number) => ["leave", "balances", year, employeeId ?? null] as const,
-  employees: ["leave", "employee-options"] as const,
+  employees: (departmentId?: number) => ["leave", "employee-options", departmentId ?? "all"] as const,
 };
 
-export function useEmployeeOptions() {
+export function useEmployeeOptions(departmentId?: number) {
   return useQuery({
-    queryKey: leaveKeys.employees,
+    queryKey: leaveKeys.employees(departmentId),
     queryFn: async () => {
       const { data } = await api.get<{ data: EmployeeOption[] }>("/api/v1/employees", {
-        params: { per_page: 100, sort: "first_name" },
+        params: {
+          per_page: 100,
+          sort: "first_name",
+          ...(departmentId ? { "filter[department_id]": departmentId } : {}),
+        },
       });
       return data.data;
     },

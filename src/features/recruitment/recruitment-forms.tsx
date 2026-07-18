@@ -92,10 +92,22 @@ export function VacancyForm({ open, onOpenChange, requisitions }: { open: boolea
   const [title, setTitle] = useState('');
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
+  const [requirements, setRequirements] = useState('');
   const [location, setLocation] = useState('');
   const [positions, setPositions] = useState('1');
   const [employmentTypeId, setEmploymentTypeId] = useState('');
   const [closesAt, setClosesAt] = useState('');
+  const [visibility, setVisibility] = useState<'public' | 'private'>('private');
+
+  function selectRequisition(value: string) {
+    setRequisitionId(value);
+    const requisition = requisitions.find((item) => item.id === Number(value));
+    if (!requisition) return;
+
+    setTitle(requisition.position?.title ?? requisition.title);
+    setEmploymentTypeId(requisition.employment_type ? String(requisition.employment_type.id) : '');
+    setPositions(String(requisition.headcount));
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -106,24 +118,29 @@ export function VacancyForm({ open, onOpenChange, requisitions }: { open: boolea
         title,
         code: code || null,
         description,
+        requirements: requirements || null,
         location: location || null,
         positions_available: Number(positions),
         closes_at: closesAt || null,
+        visibility,
       });
       toast.success('Vacancy created as draft.');
       onOpenChange(false);
       setTitle('');
       setDescription('');
+      setRequirements('');
+      setRequisitionId('');
+      setVisibility('private');
     } catch (error) {
       toast.error(apiErrorMessage(error));
     }
   }
 
   return (
-    <FormDialog open={open} onOpenChange={onOpenChange} title='Create vacancy' description='A vacancy must use approved requisition headcount.' formId='vacancy-form' isPending={create.isPending}>
+    <FormDialog open={open} onOpenChange={onOpenChange} title='Create vacancy' description='Create a vacancy from an approved position and choose where it can be seen.' formId='vacancy-form' isPending={create.isPending}>
       <form id='vacancy-form' onSubmit={submit} className='grid gap-4 py-2'>
         <Field label='Approved requisition'>
-          <select className={selectClass} value={requisitionId} onChange={(event) => setRequisitionId(event.target.value)} required>
+          <select className={selectClass} value={requisitionId} onChange={(event) => selectRequisition(event.target.value)} required>
             <option value=''>Select requisition</option>
             {requisitions.filter((item) => item.status === 'approved').map((item) => <option key={item.id} value={item.id}>{item.title} ({item.headcount})</option>)}
           </select>
@@ -139,11 +156,22 @@ export function VacancyForm({ open, onOpenChange, requisitions }: { open: boolea
             {employmentTypes.data?.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>
         </Field>
-        <Field label='Description'><Input value={description} onChange={(event) => setDescription(event.target.value)} required /></Field>
+        <Field label='Description'>
+          <textarea className='min-h-24 rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring' value={description} onChange={(event) => setDescription(event.target.value)} required />
+        </Field>
+        <Field label='Requirements'>
+          <textarea className='min-h-24 rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring' value={requirements} onChange={(event) => setRequirements(event.target.value)} />
+        </Field>
         <div className='grid grid-cols-2 gap-3'>
           <Field label='Location'><Input value={location} onChange={(event) => setLocation(event.target.value)} /></Field>
           <Field label='Closing date'><Input type='date' value={closesAt} onChange={(event) => setClosesAt(event.target.value)} /></Field>
         </div>
+        <Field label='Visibility'>
+          <select className={selectClass} value={visibility} onChange={(event) => setVisibility(event.target.value as 'public' | 'private')}>
+            <option value='private'>Private - internal hiring only</option>
+            <option value='public'>Public - show on FruitionHR Careers</option>
+          </select>
+        </Field>
       </form>
     </FormDialog>
   );
