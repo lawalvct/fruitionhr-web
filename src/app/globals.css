@@ -151,14 +151,19 @@
   }
 }
 
+/* Only animate transform's scale + a small settle. Centering is owned by the
+   Tailwind `-translate-x-1/2 -translate-y-1/2` utilities, which in Tailwind v4
+   compile to the independent CSS `translate` property — re-applying translate()
+   here would stack on top of it and push the dialog off-centre. Ending at
+   translateY(0) keeps the composed result perfectly centred. */
 @keyframes welcome-dialog-in {
   from {
     opacity: 0;
-    transform: translate(-50%, -46%) scale(0.96);
+    transform: translateY(10px) scale(0.96);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 

@@ -9,7 +9,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -73,7 +72,7 @@ export function NotificationBell() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         <div className="flex items-center justify-between px-2 py-1">
-          <DropdownMenuLabel className="p-0">Notifications</DropdownMenuLabel>
+          <p className="text-xs font-medium text-muted-foreground">Notifications</p>
           {unread > 0 && (
             <button
               type="button"
