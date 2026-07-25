@@ -6,9 +6,11 @@ import {
   CalendarClock,
   CalendarDays,
   ClipboardCheck,
+  Clock,
   Gauge,
   HandCoins,
   LayoutDashboard,
+  Receipt,
   Settings,
   Timer,
   UserRound,
@@ -22,8 +24,12 @@ import { AppShell, type NavItem } from "@/components/app-shell";
 // Grouped sidebar nav; items are permission-gated per user.
 const nav: NavItem[] = [
   { group: "Workspace", href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { group: "Workspace", href: "/self-service", label: "Self-service", icon: UserRound, permission: "ess.profile.view" },
   { group: "Workspace", href: "/approvals", label: "Approvals", icon: ClipboardCheck, permission: "mss.approvals.view" },
+
+  { group: "Self-service", href: "/self-service/profile", label: "My Profile", icon: UserRound, permission: "ess.profile.view" },
+  { group: "Self-service", href: "/self-service/leave", label: "My Leave", icon: CalendarDays, permission: "ess.leave.view" },
+  { group: "Self-service", href: "/self-service/attendance", label: "My Attendance", icon: Clock, permission: "ess.attendance.view" },
+  { group: "Self-service", href: "/self-service/payslips", label: "My Payslips", icon: Receipt, permission: "ess.payslips.view" },
 
   { group: "People", href: "/employees", label: "Employees", icon: Users, permission: "employees.view" },
   { group: "People", href: "/attendance", label: "Attendance", icon: CalendarClock, permission: "attendance.view" },

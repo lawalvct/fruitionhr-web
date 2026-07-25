@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useMe, useCan } from '@/features/auth/use-auth';
 import { useCompanyOptions } from '@/features/company/use-company';
-import type { AppraisalCycle, AppraisalTemplate } from '@/features/performance/types';
+import { APPRAISAL_TYPES, type AppraisalCycle, type AppraisalTemplate } from '@/features/performance/types';
 import {
   type PerformanceEmployee,
   useCreateAssignment,
@@ -20,18 +20,36 @@ import { apiErrorMessage } from '@/lib/api';
 const selectClass = 'h-9 rounded-md border bg-background px-2 text-sm';
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className='grid gap-2'><Label>{label}</Label>{children}</div>; }
 
+function typeLabel(value: string) {
+  return value.replaceAll('_', ' ').replace(/^./, (letter) => letter.toUpperCase());
+}
+
 export function CycleForm({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const create = useCreateCycle();
   const [name, setName] = useState('');
+  const [appraisalType, setAppraisalType] = useState('annual');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [reviewStart, setReviewStart] = useState('');
   const [reviewEnd, setReviewEnd] = useState('');
+  const [selfReview, setSelfReview] = useState(true);
+  const [calibration, setCalibration] = useState(false);
+  const [appealDays, setAppealDays] = useState('7');
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     try {
-      await create.mutateAsync({ name, starts_at: start, ends_at: end, review_starts_at: reviewStart || null, review_ends_at: reviewEnd || null });
+      await create.mutateAsync({
+        name,
+        appraisal_type: appraisalType,
+        starts_at: start,
+        ends_at: end,
+        review_starts_at: reviewStart || null,
+        review_ends_at: reviewEnd || null,
+        self_review_enabled: selfReview,
+        calibration_enabled: calibration,
+        appeal_window_days: Number(appealDays) || 7,
+      });
       toast.success('Appraisal cycle created.');
       onOpenChange(false);
       setName('');
@@ -39,11 +57,29 @@ export function CycleForm({ open, onOpenChange }: { open: boolean; onOpenChange:
   }
 
   return (
-    <FormDialog open={open} onOpenChange={onOpenChange} title='New appraisal cycle' description='Define the performance and review windows.' formId='cycle-form' isPending={create.isPending}>
+    <FormDialog open={open} onOpenChange={onOpenChange} title='New appraisal cycle' description='Define the appraisal type, windows, and review configuration.' formId='cycle-form' isPending={create.isPending}>
       <form id='cycle-form' onSubmit={submit} className='grid gap-4 py-2'>
-        <Field label='Cycle name'><Input value={name} onChange={(event) => setName(event.target.value)} required /></Field>
+        <div className='grid grid-cols-2 gap-3'>
+          <Field label='Cycle name'><Input value={name} onChange={(event) => setName(event.target.value)} required /></Field>
+          <Field label='Appraisal type'>
+            <select className={selectClass} value={appraisalType} onChange={(event) => setAppraisalType(event.target.value)}>
+              {APPRAISAL_TYPES.map((type) => <option key={type} value={type}>{typeLabel(type)}</option>)}
+            </select>
+          </Field>
+        </div>
         <div className='grid grid-cols-2 gap-3'><Field label='Performance starts'><Input type='date' value={start} onChange={(event) => setStart(event.target.value)} required /></Field><Field label='Performance ends'><Input type='date' value={end} onChange={(event) => setEnd(event.target.value)} required /></Field></div>
         <div className='grid grid-cols-2 gap-3'><Field label='Review starts'><Input type='date' value={reviewStart} onChange={(event) => setReviewStart(event.target.value)} /></Field><Field label='Review ends'><Input type='date' value={reviewEnd} onChange={(event) => setReviewEnd(event.target.value)} /></Field></div>
+        <div className='grid grid-cols-2 gap-3'>
+          <label className='flex items-center gap-2 text-sm'>
+            <input type='checkbox' checked={selfReview} onChange={(event) => setSelfReview(event.target.checked)} className='size-4 accent-fruition-600' />
+            Allow self review
+          </label>
+          <label className='flex items-center gap-2 text-sm'>
+            <input type='checkbox' checked={calibration} onChange={(event) => setCalibration(event.target.checked)} className='size-4 accent-fruition-600' />
+            HR calibration before approval
+          </label>
+        </div>
+        <Field label='Appeal window (days after approval)'><Input type='number' min={1} max={90} value={appealDays} onChange={(event) => setAppealDays(event.target.value)} /></Field>
       </form>
     </FormDialog>
   );

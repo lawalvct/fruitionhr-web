@@ -3,14 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronsUpDown, LoaderCircle, LogOut, Menu, Search, type LucideIcon } from "lucide-react";
+import { ChevronsUpDown, LoaderCircle, LogOut, Menu, Search, UserRound, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useLogout, useMe } from "@/features/auth/use-auth";
+import { useCompanyLogoImage } from "@/features/company/use-company";
 import { useEmployeeSearch } from "@/features/employees/use-employees";
 import { NotificationBell } from "@/features/notifications/notification-bell";
+import { useAvatarImage } from "@/features/profile/use-profile";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import { PageTitleProvider } from "@/components/page-title-context";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -68,6 +70,15 @@ function ProfileMenu({
             <p className="truncate text-xs text-muted-foreground">{me?.email}</p>
           </div>
           <div className="my-1 h-px bg-border" />
+          <Link
+            href="/profile"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <UserRound className="size-4" />
+            Account settings
+          </Link>
           <button
             type="button"
             role="menuitem"
@@ -153,17 +164,36 @@ function SidebarNav({
   );
 }
 
-function SidebarBrand({ title, companyName }: { title: string; companyName?: string }) {
+function SidebarBrand({
+  title,
+  companyName,
+  logoUrl,
+}: {
+  title: string;
+  companyName?: string;
+  logoUrl?: string | null;
+}) {
+  const logoSrc = useCompanyLogoImage(logoUrl);
+
   return (
     <div className="flex h-16 items-center gap-2.5 border-b border-white/10 px-4">
-      <Image
-        src="/fruitionhr-logo-icon.svg"
-        alt="FruitionHR"
-        width={34}
-        height={34}
-        className="rounded-lg"
-        priority
-      />
+      {logoSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element -- authenticated blob URL, not a static asset
+        <img
+          src={logoSrc}
+          alt={companyName ?? "Company logo"}
+          className="size-8.5 shrink-0 rounded-lg bg-white object-contain p-0.5"
+        />
+      ) : (
+        <Image
+          src="/fruitionhr-logo-icon.svg"
+          alt="FruitionHR"
+          width={34}
+          height={34}
+          className="rounded-lg"
+          priority
+        />
+      )}
       <span className="hidden min-w-0 truncate text-[15px] font-extrabold tracking-tight text-white md:block">
         {companyName ?? title}
       </span>
@@ -283,6 +313,7 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const { data: me } = useMe();
+  const avatarSrc = useAvatarImage(me?.avatar_url);
   const permissions = me?.permissions ?? [];
   const [mobileOpen, setMobileOpen] = useState(false);
   const [registeredPageTitle, setRegisteredPageTitle] = useState<string | null>(null);
@@ -312,7 +343,7 @@ export function AppShell({
     <div className="flex min-h-screen bg-[#f8fafc]">
       {/* Desktop sidebar */}
       <aside className={cn("hidden w-62 shrink-0 flex-col md:flex", sidebarSurface)}>
-        <SidebarBrand title={title} companyName={me?.tenant?.name} />
+        <SidebarBrand title={title} companyName={me?.tenant?.name} logoUrl={me?.tenant?.logo_url} />
         <SidebarNav items={visibleNav} pathname={pathname} />
 
         {/* user card */}
@@ -328,6 +359,7 @@ export function AppShell({
                 className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors duration-150 hover:bg-white/5"
               >
                 <Avatar className="size-8 ring-2 ring-fruition-400/40">
+                  {avatarSrc && <AvatarImage src={avatarSrc} alt={me?.name ?? "You"} />}
                   <AvatarFallback className="bg-fruition-700 text-xs font-semibold text-white">
                     {initials}
                   </AvatarFallback>
@@ -354,7 +386,7 @@ export function AppShell({
           className={cn("w-72 gap-0 border-white/10 p-0", sidebarSurface)}
         >
           <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <SidebarBrand title={title} companyName={me?.tenant?.name} />
+          <SidebarBrand title={title} companyName={me?.tenant?.name} logoUrl={me?.tenant?.logo_url} />
           <SidebarNav
             items={visibleNav}
             pathname={pathname}
@@ -399,6 +431,7 @@ export function AppShell({
                   className={cn(buttonVariants({ variant: "ghost" }), "gap-2 px-2")}
                 >
                   <Avatar className="size-7">
+                    {avatarSrc && <AvatarImage src={avatarSrc} alt={me?.name ?? "You"} />}
                     <AvatarFallback className="bg-fruition-100 text-xs font-semibold text-fruition-800">
                       {initials}
                     </AvatarFallback>

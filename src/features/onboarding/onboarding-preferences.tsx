@@ -1,13 +1,18 @@
 "use client";
 
-import { Building2, CalendarDays, Loader2, Save, ShieldCheck } from "lucide-react";
+import { Building2, CalendarDays, ImagePlus, Loader2, Save, ShieldCheck, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useMe } from "@/features/auth/use-auth";
+import {
+  useCompanyLogoImage,
+  useDeleteCompanyLogo,
+  useUploadCompanyLogo,
+} from "@/features/company/use-company";
 import {
   type OnboardingData,
   useOnboarding,
@@ -33,6 +38,73 @@ const defaultData: OnboardingData = {
 
 function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return <div className={cn("grid gap-2", className)}><Label>{label}</Label>{children}</div>;
+}
+
+function CompanyLogoField({ companyName }: { companyName?: string }) {
+  const { data: me } = useMe();
+  const logoSrc = useCompanyLogoImage(me?.tenant?.logo_url);
+  const uploadLogo = useUploadCompanyLogo();
+  const deleteLogo = useDeleteCompanyLogo();
+  const busy = uploadLogo.isPending || deleteLogo.isPending;
+
+  function onFile(file?: File) {
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Choose a JPG, PNG, or WebP image.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Logo must be 2 MB or smaller.");
+      return;
+    }
+    uploadLogo.mutate(file, {
+      onSuccess: () => toast.success("Logo updated"),
+      onError: (error) => toast.error(apiErrorMessage(error)),
+    });
+  }
+
+  return (
+    <Field label="Company logo" className="sm:col-span-2">
+      <div className="flex items-center gap-4">
+        <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/30">
+          {logoSrc ? (
+            // eslint-disable-next-line @next/next/no-img-element -- authenticated blob URL, not a static asset
+            <img src={logoSrc} alt={`${companyName ?? "Company"} logo`} className="size-full object-contain p-1.5" />
+          ) : (
+            <Building2 className="size-6 text-muted-foreground" />
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <label className={cn(buttonVariants({ variant: "outline", size: "sm" }), "cursor-pointer", busy && "pointer-events-none opacity-50")}>
+            <ImagePlus className="size-4" />
+            {me?.tenant?.logo_url ? "Change logo" : "Upload logo"}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              disabled={busy}
+              onChange={(event) => {
+                onFile(event.target.files?.[0]);
+                event.target.value = "";
+              }}
+            />
+          </label>
+          {me?.tenant?.logo_url && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={busy}
+              onClick={() => deleteLogo.mutate(undefined, { onSuccess: () => toast.success("Logo removed") })}
+            >
+              <Trash2 className="size-4" /> Remove
+            </Button>
+          )}
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground">JPG, PNG, or WebP up to 2 MB. Shown in the app sidebar and on payslips.</p>
+    </Field>
+  );
 }
 
 export function OnboardingPreferences() {
@@ -91,6 +163,7 @@ export function OnboardingPreferences() {
           <div><h2 className="font-heading text-lg font-semibold">Company profile</h2><p className="mt-1 text-sm text-muted-foreground">These details remain editable after workspace setup and are used across company records.</p></div>
         </div>
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <CompanyLogoField companyName={form.company_name} />
           <Field label="Company name" className="sm:col-span-2"><Input value={form.company_name ?? ""} onChange={(event) => set("company_name", event.target.value)} required /></Field>
           <Field label="Industry"><Input value={form.industry ?? ""} onChange={(event) => set("industry", event.target.value)} /></Field>
           <Field label="Company size"><select className={selectClass} value={form.company_size ?? ""} onChange={(event) => set("company_size", event.target.value)}><option value="">Select size</option>{companySizes.map((size) => <option key={size} value={size}>{size} employees</option>)}</select></Field>

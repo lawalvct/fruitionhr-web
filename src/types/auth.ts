@@ -5,6 +5,7 @@ export interface MeTenant {
   name: string;
   slug: string;
   status: "active" | "suspended" | "cancelled";
+  logo_url: string | null;
   onboarding_status: "not_started" | "in_progress" | "completed" | "skipped";
   onboarding_step: number;
 }
@@ -19,6 +20,10 @@ export interface Me {
   id: number;
   name: string;
   email: string;
+  phone: string | null;
+  timezone: string | null;
+  bio: string | null;
+  avatar_url: string | null;
   is_email_verified: boolean;
   is_super_admin: boolean;
   status: "active" | "invited" | "disabled";

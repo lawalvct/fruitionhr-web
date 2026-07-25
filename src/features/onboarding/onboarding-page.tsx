@@ -47,6 +47,7 @@ const defaultData: OnboardingData = {
   pay_frequency: "monthly",
   pay_day: 25,
   working_days: weekdays.slice(0, 5),
+  seed_performance_defaults: true,
 };
 
 const steps = [
@@ -406,7 +407,23 @@ function OnboardingForm({ initial, initialStep }: { initial: OnboardingData; ini
                   })}
                 </div>
 
-                <div className="mt-6 flex gap-3 rounded-md border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
+                <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-md border border-fruition-200 bg-fruition-50/60 p-4">
+                  <input
+                    type="checkbox"
+                    checked={form.seed_performance_defaults ?? true}
+                    onChange={(event) => set("seed_performance_defaults", event.target.checked)}
+                    className="mt-0.5 size-4 shrink-0 accent-fruition-600"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-slate-800">Include sample performance appraisal data</span>
+                    <span className="mt-0.5 block text-sm leading-6 text-slate-600">
+                      A KPI library covering 9 departments, a 5-band rating scale, and ready-made appraisal templates
+                      (General Staff, People Manager, Sales Executive). Fully editable — or skip it and build your own later.
+                    </span>
+                  </span>
+                </label>
+
+                <div className="mt-4 flex gap-3 rounded-md border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
                   <ShieldCheck className="mt-0.5 size-5 shrink-0 text-blue-600" />
                   No fake employees, salaries, attendance, or payroll runs will be added. These are ordinary master records you can rename or remove later.
                 </div>

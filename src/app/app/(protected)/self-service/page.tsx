@@ -1,7 +1,6 @@
-import { SelfServicePage } from "@/features/self-service/self-service-page";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Self-service" };
-
-export default function SelfServiceRoute() {
-  return <SelfServicePage />;
+// /self-service now lives as separate sidebar pages; send bare visits to Profile.
+export default function SelfServiceIndexRoute() {
+  redirect("/self-service/profile");
 }

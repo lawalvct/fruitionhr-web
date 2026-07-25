@@ -27,6 +27,7 @@ export interface OnboardingData {
   tax_state?: string;
   tin?: string;
   rc_number?: string;
+  seed_performance_defaults?: boolean;
 }
 
 export interface Onboarding {

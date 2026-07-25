@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type { AppraisalAssignment, AppraisalCycle, AppraisalTemplate, Goal, PerformanceCategory, PerformanceKpi, RatingScale } from '@/features/performance/types';
+import type { AppraisalAssignment, AppraisalCycle, AppraisalTemplate, Goal, PerformanceCategory, PerformanceKpi, PerformanceSummary, Pip, RatingScale } from '@/features/performance/types';
 import { api, ensureCsrf } from '@/lib/api';
 
 interface Collection<T> { data: T[] }
@@ -20,6 +20,8 @@ export const performanceKeys = {
   assignment: (id: number | null) => ['performance', 'assignments', id] as const,
   goals: ['performance', 'goals'] as const,
   employees: ['performance', 'employees'] as const,
+  pips: ['performance', 'pips'] as const,
+  summary: (cycleId: number | null) => ['performance', 'summary', cycleId] as const,
 };
 
 const collectionQuery = async <T,>(url: string): Promise<T[]> => (await api.get<Collection<T>>(url)).data.data;
@@ -64,3 +66,48 @@ export const useSubmitAppraisalReview = () => useAction<{ assignmentId: number; 
 );
 export const useCreateGoal = () => useAction<Record<string, unknown>>((input) => api.post('/api/v1/goals', input));
 export const useGoalCheckin = () => useAction<{ id: number; input: Record<string, unknown> }>(({ id, input }) => api.post('/api/v1/goals/' + id + '/check-ins', input));
+
+/* ── Sample library, KPI editing, template cloning ───────────────────────── */
+
+export const useSeedPerformanceDefaults = () => useAction<void>(() => api.post('/api/v1/performance/seed-defaults'));
+export const useUpdateKpi = () => useAction<{ id: number; input: Record<string, unknown> }>(({ id, input }) => api.put('/api/v1/performance/kpis/' + id, input));
+export const useCloneTemplate = () => useAction<number>((id) => api.post('/api/v1/performance/templates/' + id + '/clone'));
+
+/* ── Result workflow: calibration → approval → acknowledgment → appeal ───── */
+
+export const useCalibrateResult = () => useAction<{ id: number; score_basis_points: number; justification: string }>(
+  ({ id, ...input }) => api.post('/api/v1/performance/results/' + id + '/calibrate', input),
+);
+export const useFinalizeCalibration = () => useAction<number>((cycleId) => api.post('/api/v1/performance/cycles/' + cycleId + '/calibration/finalize'));
+export const useApproveResult = () => useAction<number>((id) => api.post('/api/v1/performance/results/' + id + '/approve'));
+export const useRejectResult = () => useAction<{ id: number; reason: string }>(({ id, reason }) => api.post('/api/v1/performance/results/' + id + '/reject', { reason }));
+export const useAcknowledgeResult = () => useAction<number>((id) => api.post('/api/v1/performance/results/' + id + '/acknowledge'));
+export const useAppealResult = () => useAction<{ id: number; reason: string }>(({ id, reason }) => api.post('/api/v1/performance/results/' + id + '/appeal', { reason }));
+export const useResolveAppeal = () => useAction<{ id: number; input: Record<string, unknown> }>(({ id, input }) => api.post('/api/v1/performance/appeals/' + id + '/resolve', input));
+export const useReturnReview = () => useAction<{ assignmentId: number; reviewerId: number }>(
+  ({ assignmentId, reviewerId }) => api.post('/api/v1/performance/assignments/' + assignmentId + '/reviewers/' + reviewerId + '/return'),
+);
+
+/* ── Performance improvement plans ───────────────────────────────────────── */
+
+export const usePips = () => useQuery({ queryKey: performanceKeys.pips, queryFn: () => collectionQuery<Pip>('/api/v1/performance/pips') });
+export const useCreatePip = () => useAction<Record<string, unknown>>((input) => api.post('/api/v1/performance/pips', input));
+export const useActivatePip = () => useAction<number>((id) => api.post('/api/v1/performance/pips/' + id + '/activate'));
+export const useClosePip = () => useAction<{ id: number; outcome: 'successful' | 'unsuccessful'; outcome_note?: string }>(
+  ({ id, ...input }) => api.post('/api/v1/performance/pips/' + id + '/close', input),
+);
+export const useUpdatePipMilestone = () => useAction<{ id: number; status: string; notes?: string }>(
+  ({ id, ...input }) => api.put('/api/v1/performance/pip-milestones/' + id, input),
+);
+
+/* ── Reports ─────────────────────────────────────────────────────────────── */
+
+export function usePerformanceSummary(cycleId: number | null, enabled = true) {
+  return useQuery({
+    queryKey: performanceKeys.summary(cycleId),
+    enabled,
+    queryFn: async () => (await api.get<Item<PerformanceSummary>>('/api/v1/performance/reports/summary', {
+      params: cycleId ? { cycle_id: cycleId } : {},
+    })).data.data,
+  });
+}
