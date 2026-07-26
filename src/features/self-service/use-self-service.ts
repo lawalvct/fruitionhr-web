@@ -23,6 +23,16 @@ export interface AttendanceDay {
   overtime_minutes: number;
 }
 
+export interface TodayAttendance {
+  date: string;
+  state: "not_clocked_in" | "clocked_in" | "clocked_out";
+  clock_in: string | null;
+  clock_out: string | null;
+  status: string;
+  late_minutes: number;
+  overtime_minutes: number;
+}
+
 export interface SelfAttendance {
   period: string;
   employee: { id: number; name: string; employee_number: string };
@@ -71,6 +81,7 @@ export const selfServiceKeys = {
   leaveRequests: ["self-service", "leave-requests"] as const,
   leaveBalances: (year: number) => ["self-service", "leave-balances", year] as const,
   attendance: (period: string) => ["self-service", "attendance", period] as const,
+  attendanceToday: ["self-service", "attendance-today"] as const,
   payslips: ["self-service", "payslips"] as const,
   leaveTypes: ["self-service", "leave-types"] as const,
 };
@@ -147,6 +158,44 @@ export function useSelfAttendance(period: string) {
     queryKey: selfServiceKeys.attendance(period),
     queryFn: async () =>
       (await api.get<{ data: SelfAttendance }>("/api/v1/self/attendance", { params: { period } })).data.data,
+  });
+}
+
+export function useTodayAttendance() {
+  return useQuery({
+    queryKey: selfServiceKeys.attendanceToday,
+    queryFn: async () =>
+      (await api.get<{ data: TodayAttendance }>("/api/v1/self/attendance/today")).data.data,
+  });
+}
+
+export function useClockIn() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      await ensureCsrf();
+      return (await api.post<{ data: TodayAttendance }>("/api/v1/self/attendance/clock-in")).data.data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(selfServiceKeys.attendanceToday, data);
+      queryClient.invalidateQueries({ queryKey: ["self-service", "attendance"] });
+    },
+  });
+}
+
+export function useClockOut() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      await ensureCsrf();
+      return (await api.post<{ data: TodayAttendance }>("/api/v1/self/attendance/clock-out")).data.data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(selfServiceKeys.attendanceToday, data);
+      queryClient.invalidateQueries({ queryKey: ["self-service", "attendance"] });
+    },
   });
 }
 

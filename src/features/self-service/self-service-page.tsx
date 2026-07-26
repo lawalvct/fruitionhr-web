@@ -29,6 +29,8 @@ import { apiErrorMessage } from "@/lib/api";
 import { useEmployeePhoto } from "@/features/employees/use-employees";
 import {
   useApplySelfLeave,
+  useClockIn,
+  useClockOut,
   useProfileUpdateRequests,
   useSelfAttendance,
   useSelfLeaveBalances,
@@ -37,6 +39,7 @@ import {
   useSelfPayslips,
   useSelfProfile,
   useSubmitProfileUpdate,
+  useTodayAttendance,
   type ProfileUpdateInput,
 } from "@/features/self-service/use-self-service";
 
@@ -477,6 +480,85 @@ function LeaveTab() {
   );
 }
 
+function workedDuration(clockIn: string, clockOut: string): string {
+  const toMinutes = (value: string) => {
+    const [h, m] = value.split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  let minutes = toMinutes(clockOut) - toMinutes(clockIn);
+  if (minutes < 0) minutes += 24 * 60; // overnight shift
+
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+}
+
+function ClockWidget() {
+  const { data: today, isLoading } = useTodayAttendance();
+  const clockIn = useClockIn();
+  const clockOut = useClockOut();
+
+  const handleClockIn = async () => {
+    try {
+      await clockIn.mutateAsync();
+      toast.success("Clocked in.");
+    } catch (error) {
+      toast.error(apiErrorMessage(error));
+    }
+  };
+
+  const handleClockOut = async () => {
+    try {
+      await clockOut.mutateAsync();
+      toast.success("Clocked out.");
+    } catch (error) {
+      toast.error(apiErrorMessage(error));
+    }
+  };
+
+  if (isLoading) {
+    return <Skeleton className="h-20 w-full" />;
+  }
+
+  const state = today?.state ?? "not_clocked_in";
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4 shadow-sm">
+      <div className="flex items-center gap-3">
+        <span className="grid size-9 place-items-center rounded-lg bg-fruition-50 text-fruition-700">
+          <Clock className="size-4" />
+        </span>
+        <div>
+          {state === "not_clocked_in" && <p className="text-sm font-semibold">You haven&apos;t clocked in today.</p>}
+          {state === "clocked_in" && (
+            <p className="text-sm font-semibold">
+              Clocked in at {today?.clock_in}
+              {today?.status === "late" && <span className="ml-1.5 font-normal text-amber-700">· {today.late_minutes} min late</span>}
+            </p>
+          )}
+          {state === "clocked_out" && today?.clock_in && today.clock_out && (
+            <p className="text-sm font-semibold">
+              Clocked out at {today.clock_out} · worked {workedDuration(today.clock_in, today.clock_out)}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {state === "not_clocked_in" && (
+        <Button onClick={handleClockIn} disabled={clockIn.isPending}>
+          <Clock className="size-4" />
+          Clock In
+        </Button>
+      )}
+      {state === "clocked_in" && (
+        <Button variant="outline" onClick={handleClockOut} disabled={clockOut.isPending}>
+          <Clock className="size-4" />
+          Clock Out
+        </Button>
+      )}
+    </div>
+  );
+}
+
 function AttendanceTab() {
   const [period, setPeriod] = useState(currentPeriod());
   const { data, isLoading } = useSelfAttendance(period);
@@ -489,6 +571,8 @@ function AttendanceTab() {
 
   return (
     <div className="space-y-4">
+      <ClockWidget />
+
       <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card p-4 shadow-sm">
         <Button variant="outline" size="icon-sm" onClick={() => setPeriod(shiftPeriod(period, -1))} aria-label="Previous month">
           <ChevronLeft className="size-4" />
