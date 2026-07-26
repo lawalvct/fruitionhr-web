@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CalendarClock, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, Filter, Lock, Plus, RotateCcw, Timer, Upload, UserX, Users } from "lucide-react";
+import { AlertTriangle, CalendarClock, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, Filter, Lock, Plus, QrCode, RotateCcw, Settings, Timer, Upload, UserX, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -15,7 +15,9 @@ import {
   useFinalizePeriod,
   type DayStatusCode,
 } from "@/features/attendance/use-attendance";
+import { AttendanceSettingsDialog } from "@/features/attendance/attendance-settings-dialog";
 import { ImportDialog } from "@/features/attendance/import-dialog";
+import { KiosksDialog } from "@/features/attendance/kiosks-dialog";
 import { RecordLogDialog } from "@/features/attendance/record-log-dialog";
 import { ShiftsDialog } from "@/features/attendance/shifts-dialog";
 
@@ -61,6 +63,8 @@ export function AttendancePage() {
   const [recordOpen, setRecordOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [shiftsOpen, setShiftsOpen] = useState(false);
+  const [kiosksOpen, setKiosksOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [finalizeOpen, setFinalizeOpen] = useState(false);
 
   const days = useMemo(() => daysInPeriod(period), [period]);
@@ -99,6 +103,12 @@ export function AttendancePage() {
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => setShiftsOpen(true)}>
                 <Clock className="size-4" /> Shifts
+              </Button>
+              <Button variant="outline" onClick={() => setKiosksOpen(true)}>
+                <QrCode className="size-4" /> Kiosks
+              </Button>
+              <Button variant="outline" onClick={() => setSettingsOpen(true)}>
+                <Settings className="size-4" /> Settings
               </Button>
               <Button variant="outline" onClick={() => setImportOpen(true)} disabled={isFinalized}>
                 <Upload className="size-4" /> Import
@@ -229,6 +239,8 @@ export function AttendancePage() {
       <RecordLogDialog open={recordOpen} onOpenChange={setRecordOpen} period={period} employees={employees} />
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} period={period} />
       <ShiftsDialog open={shiftsOpen} onOpenChange={setShiftsOpen} />
+      <KiosksDialog open={kiosksOpen} onOpenChange={setKiosksOpen} />
+      <AttendanceSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       <ConfirmDialog
         open={finalizeOpen}
         onOpenChange={setFinalizeOpen}

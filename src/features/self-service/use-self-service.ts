@@ -31,6 +31,9 @@ export interface TodayAttendance {
   status: string;
   late_minutes: number;
   overtime_minutes: number;
+  kiosk: string | null;
+  self_clock_enabled: boolean;
+  kiosk_scanning_enabled: boolean;
 }
 
 export interface SelfAttendance {
@@ -173,9 +176,14 @@ export function useClockIn() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (kioskToken?: string) => {
       await ensureCsrf();
-      return (await api.post<{ data: TodayAttendance }>("/api/v1/self/attendance/clock-in")).data.data;
+      return (
+        await api.post<{ data: TodayAttendance }>(
+          "/api/v1/self/attendance/clock-in",
+          kioskToken ? { kiosk_token: kioskToken } : {},
+        )
+      ).data.data;
     },
     onSuccess: (data) => {
       queryClient.setQueryData(selfServiceKeys.attendanceToday, data);

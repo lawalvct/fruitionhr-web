@@ -8,12 +8,14 @@ import {
   ChevronRight,
   Clock,
   Download,
+  QrCode,
   Receipt,
   Send,
   UserRound,
   UserX,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { MoneyText } from "@/components/money-text";
@@ -27,6 +29,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiErrorMessage } from "@/lib/api";
 import { useEmployeePhoto } from "@/features/employees/use-employees";
+import { QrScanDialog } from "@/features/self-service/qr-scan-dialog";
 import {
   useApplySelfLeave,
   useClockIn,
@@ -496,11 +499,23 @@ function ClockWidget() {
   const { data: today, isLoading } = useTodayAttendance();
   const clockIn = useClockIn();
   const clockOut = useClockOut();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const kioskToken = searchParams.get("kiosk_token") ?? undefined;
+  const [scanOpen, setScanOpen] = useState(false);
 
-  const handleClockIn = async () => {
+  if (isLoading) {
+    return <Skeleton className="h-20 w-full" />;
+  }
+
+  const state = today?.state ?? "not_clocked_in";
+
+  const handleClockIn = async (token?: string) => {
     try {
-      await clockIn.mutateAsync();
+      await clockIn.mutateAsync(token);
       toast.success("Clocked in.");
+      if (kioskToken) router.replace(pathname, { scroll: false });
     } catch (error) {
       toast.error(apiErrorMessage(error));
     }
@@ -515,11 +530,26 @@ function ClockWidget() {
     }
   };
 
-  if (isLoading) {
-    return <Skeleton className="h-20 w-full" />;
-  }
+  const handleScan = (token: string) => {
+    if (state === "clocked_in") {
+      void handleClockOut();
+    } else {
+      void handleClockIn(token);
+    }
+  };
 
-  const state = today?.state ?? "not_clocked_in";
+  if (today?.self_clock_enabled === false) {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border bg-card p-4 shadow-sm">
+        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
+          <Clock className="size-4" />
+        </span>
+        <p className="text-sm text-muted-foreground">
+          Self clock-in is disabled by your organisation. Ask HR how attendance is recorded.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4 shadow-sm">
@@ -540,21 +570,32 @@ function ClockWidget() {
               Clocked out at {today.clock_out} · worked {workedDuration(today.clock_in, today.clock_out)}
             </p>
           )}
+          {today?.kiosk && <p className="mt-0.5 text-xs text-muted-foreground">via {today.kiosk} kiosk</p>}
         </div>
       </div>
 
-      {state === "not_clocked_in" && (
-        <Button onClick={handleClockIn} disabled={clockIn.isPending}>
-          <Clock className="size-4" />
-          Clock In
-        </Button>
-      )}
-      {state === "clocked_in" && (
-        <Button variant="outline" onClick={handleClockOut} disabled={clockOut.isPending}>
-          <Clock className="size-4" />
-          Clock Out
-        </Button>
-      )}
+      <div className="flex items-center gap-2">
+        {state !== "clocked_out" && today?.kiosk_scanning_enabled !== false && (
+          <Button variant="outline" onClick={() => setScanOpen(true)}>
+            <QrCode className="size-4" />
+            Scan QR
+          </Button>
+        )}
+        {state === "not_clocked_in" && (
+          <Button onClick={() => void handleClockIn(kioskToken)} disabled={clockIn.isPending}>
+            <Clock className="size-4" />
+            Clock In
+          </Button>
+        )}
+        {state === "clocked_in" && (
+          <Button variant="outline" onClick={handleClockOut} disabled={clockOut.isPending}>
+            <Clock className="size-4" />
+            Clock Out
+          </Button>
+        )}
+      </div>
+
+      <QrScanDialog open={scanOpen} onOpenChange={setScanOpen} onScan={handleScan} />
     </div>
   );
 }
@@ -571,7 +612,9 @@ function AttendanceTab() {
 
   return (
     <div className="space-y-4">
-      <ClockWidget />
+      <Suspense fallback={<Skeleton className="h-20 w-full" />}>
+        <ClockWidget />
+      </Suspense>
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card p-4 shadow-sm">
         <Button variant="outline" size="icon-sm" onClick={() => setPeriod(shiftPeriod(period, -1))} aria-label="Previous month">

@@ -74,10 +74,30 @@ export interface ShiftAssignmentRow {
   } | null;
 }
 
+export interface Kiosk {
+  id: number;
+  name: string;
+  location: string | null;
+  is_active: boolean;
+}
+
+export interface KioskInput {
+  name: string;
+  location?: string | null;
+  is_active?: boolean;
+}
+
+export interface AttendanceSettings {
+  self_clock_enabled: boolean;
+  kiosk_enabled: boolean;
+}
+
 export const attendanceKeys = {
   grid: (period: string) => ["attendance", "grid", period] as const,
   shifts: ["attendance", "shifts"] as const,
   shiftAssignments: ["attendance", "shift-assignments"] as const,
+  kiosks: ["attendance", "kiosks"] as const,
+  settings: ["attendance", "settings"] as const,
 };
 
 export function useAttendanceGrid(period: string) {
@@ -212,6 +232,81 @@ export function useImportLogs(period: string) {
       return data.data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: attendanceKeys.grid(period) }),
+  });
+}
+
+export function useAttendanceSettings(enabled = true) {
+  return useQuery({
+    queryKey: attendanceKeys.settings,
+    enabled,
+    queryFn: async () => {
+      const { data } = await api.get<{ data: AttendanceSettings }>("/api/v1/attendance-settings");
+      return data.data;
+    },
+  });
+}
+
+export function useSaveAttendanceSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: AttendanceSettings) => {
+      await ensureCsrf();
+      const { data } = await api.put<{ data: AttendanceSettings }>("/api/v1/attendance-settings", input);
+      return data.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: attendanceKeys.settings }),
+  });
+}
+
+export function useKiosks(enabled = true) {
+  return useQuery({
+    queryKey: attendanceKeys.kiosks,
+    enabled,
+    queryFn: async () => {
+      const { data } = await api.get<{ data: Kiosk[] }>("/api/v1/attendance-kiosks");
+      return data.data;
+    },
+  });
+}
+
+export function useSaveKiosk() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, input }: { id?: number; input: KioskInput }) => {
+      await ensureCsrf();
+      if (id) {
+        const { data } = await api.put(`/api/v1/attendance-kiosks/${id}`, input);
+        return data;
+      }
+      const { data } = await api.post("/api/v1/attendance-kiosks", input);
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: attendanceKeys.kiosks }),
+  });
+}
+
+export function useDeleteKiosk() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await ensureCsrf();
+      await api.delete(`/api/v1/attendance-kiosks/${id}`);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: attendanceKeys.kiosks }),
+  });
+}
+
+export function useKioskToken(kioskId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ["attendance", "kiosk-token", kioskId] as const,
+    enabled,
+    refetchInterval: 20_000,
+    queryFn: async () => {
+      const { data } = await api.get<{ data: { token: string; expires_in: number } }>(
+        `/api/v1/attendance-kiosks/${kioskId}/token`,
+      );
+      return data.data;
+    },
   });
 }
 
