@@ -10,12 +10,15 @@ import {
   Search,
   UserRound,
   XCircle,
+  Banknote,
+  CalendarRange,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/page-header";
 import { PageLoader } from "@/components/page-loader";
+import { MoneyText } from "@/components/money-text";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +39,39 @@ function moduleLabel(module: string): string {
 function formatDate(value: string | null): string {
   if (!value) return "-";
   return new Date(value).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function periodLabel(period: string): string {
+  const [year, month] = period.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString("en-NG", { month: "short", year: "numeric" });
+}
+
+function MoneyRequestDetails({ request }: { request: ApprovalRequest }) {
+  const details = request.record_details;
+  if (!details || details.kind !== "money_request") return null;
+
+  return (
+    <div className="mx-4 mb-4 grid gap-3 rounded-xl border border-fruition-100 bg-fruition-50/50 p-4 sm:mx-5 sm:grid-cols-2 lg:grid-cols-4 dark:bg-fruition-950/10">
+      <div className="sm:col-span-2 lg:col-span-1">
+        <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground"><Banknote className="size-3.5" /> Amount requested</p>
+        <p className="mt-1 text-2xl font-bold text-fruition-700"><MoneyText kobo={details.principal} /></p>
+      </div>
+      <div>
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Request type</p>
+        <p className="mt-1 text-sm font-semibold">{details.type_label}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{details.type === "loan" ? `${details.months} monthly installments` : "One payroll deduction"}</p>
+      </div>
+      <div>
+        <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground"><CalendarRange className="size-3.5" /> Deduction starts</p>
+        <p className="mt-1 text-sm font-semibold">{periodLabel(details.start_period)}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{details.type === "loan" ? <><MoneyText kobo={details.monthly_installment} /> per month</> : "Full requested amount"}</p>
+      </div>
+      <div className="sm:col-span-2 lg:col-span-1">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Reason</p>
+        <p className="mt-1 break-words text-sm font-medium">{details.reason || "No reason provided"}</p>
+      </div>
+    </div>
+  );
 }
 
 function RequestIcon({ module }: { module: string }) {
@@ -92,12 +128,20 @@ function PendingCard({ request }: { request: ApprovalRequest }) {
         <StatusBadge status={request.status} />
       </div>
 
+      <MoneyRequestDetails request={request} />
+
       <div className="border-t bg-muted/20 px-4 py-3 sm:px-5">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span>Current step: <strong className="font-medium text-foreground">{request.current_step?.name ?? "Final review"}</strong></span>
           <span>Approver role: <strong className="font-medium text-foreground">{request.current_step?.approver_role ?? "Owner"}</strong></span>
           {request.actions.length > 0 && <span>{request.actions.length} prior action{request.actions.length === 1 ? "" : "s"}</span>}
         </div>
+        {request.actions.length > 0 && (
+          <div className="mt-3 space-y-1.5 rounded-lg border bg-background px-3 py-2">
+            <p className="text-xs font-semibold text-muted-foreground">Previous actions</p>
+            {request.actions.map((item) => <p key={item.id} className="text-xs"><span className="font-medium">{item.by}</span> <span className="capitalize">{item.action}d</span> this request{item.comments ? ` — “${item.comments}”` : ""} <span className="text-muted-foreground">· {formatDate(item.at)}</span></p>)}
+          </div>
+        )}
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
           <Input
             className="h-10 min-w-0 flex-1 bg-background"
@@ -157,7 +201,7 @@ export function ApprovalsPage() {
     const term = search.trim().toLowerCase();
     return source.filter((request) => {
       const matchesModule = moduleFilter === "all" || request.module === moduleFilter;
-      const searchable = `${moduleLabel(request.module)} ${request.record_summary} ${request.requested_by.name}`.toLowerCase();
+      const searchable = `${moduleLabel(request.module)} ${request.record_summary} ${request.requested_by.name} ${request.record_details?.reason ?? ""} ${request.record_details?.principal ?? ""}`.toLowerCase();
       return matchesModule && (!term || searchable.includes(term));
     });
   }, [moduleFilter, myRequests, pendingRequests, search, view]);

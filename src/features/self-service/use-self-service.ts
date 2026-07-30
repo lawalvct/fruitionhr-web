@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ensureCsrf } from "@/lib/api";
 import type { Employee } from "@/features/employees/types";
 import type { LeaveBalanceItem, LeaveRequestItem, LeaveType } from "@/features/leave/use-leave";
+import type { LoanType, StaffLoan } from "@/features/loans/use-loans";
 
 export interface ProfileUpdateRequestItem {
   id: number;
@@ -87,6 +88,7 @@ export const selfServiceKeys = {
   attendanceToday: ["self-service", "attendance-today"] as const,
   payslips: ["self-service", "payslips"] as const,
   leaveTypes: ["self-service", "leave-types"] as const,
+  loanRequests: ["self-service", "loan-requests"] as const,
 };
 
 export function useSelfProfile() {
@@ -211,5 +213,23 @@ export function useSelfPayslips() {
   return useQuery({
     queryKey: selfServiceKeys.payslips,
     queryFn: async () => (await api.get<{ data: PayslipItem[] }>("/api/v1/self/payslips")).data.data,
+  });
+}
+
+export function useSelfLoanRequests() {
+  return useQuery({
+    queryKey: selfServiceKeys.loanRequests,
+    queryFn: async () => (await api.get<{ data: StaffLoan[] }>("/api/v1/self/loan-requests")).data.data,
+  });
+}
+
+export function useRequestSelfLoan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { type: LoanType; principal: number; months?: number; start_period: string; reason: string }) => {
+      await ensureCsrf();
+      return (await api.post<{ data: StaffLoan }>("/api/v1/self/loan-requests", input)).data.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: selfServiceKeys.loanRequests }),
   });
 }

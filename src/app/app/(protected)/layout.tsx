@@ -30,6 +30,7 @@ const nav: NavItem[] = [
   { group: "Self-service", href: "/self-service/leave", label: "My Leave", icon: CalendarDays, permission: "ess.leave.view" },
   { group: "Self-service", href: "/self-service/attendance", label: "My Attendance", icon: Clock, permission: "ess.attendance.view" },
   { group: "Self-service", href: "/self-service/payslips", label: "My Payslips", icon: Receipt, permission: "ess.payslips.view" },
+  { group: "Self-service", href: "/self-service/loans", label: "My IOU & Loans", icon: HandCoins, permission: "ess.loans.view" },
 
   { group: "People", href: "/employees", label: "Employees", icon: Users, permission: "employees.view" },
   { group: "People", href: "/attendance", label: "Attendance", icon: CalendarClock, permission: "attendance.view" },

@@ -19,6 +19,17 @@ export interface ApprovalRequest {
   record_type: string;
   record_id: number;
   record_summary: string;
+  record_details: null | {
+    kind: "money_request";
+    type: "advance" | "loan";
+    type_label: string;
+    principal: number;
+    months: number;
+    monthly_installment: number;
+    start_period: string;
+    reason: string | null;
+    employee: { id: number; name: string; number: string } | null;
+  };
   requested_by: { id: number; name: string };
   current_step: { id: number; name: string; approver_role: string } | null;
   actions: ApprovalAction[];
