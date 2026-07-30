@@ -1,12 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, MoveRight, Pencil } from "lucide-react";
+import { ArrowLeft, Mail, MoveRight, Pencil, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { toast } from "sonner";
 
 import { Can } from "@/components/can";
 import { FormDialog } from "@/components/form-dialog";
@@ -20,7 +21,8 @@ import { mapLaravelErrorsToForm, nullableNumber } from "@/lib/forms";
 import { DocumentsPanel } from "@/features/documents/documents-panel";
 import { CompensationTab } from "@/features/payroll/compensation-tab";
 import { useCompanyOptions } from "@/features/company/use-company";
-import { useAssignEmployee, useEmployee, useEmployeePhoto } from "@/features/employees/use-employees";
+import { useAssignEmployee, useEmployee, useEmployeePhoto, useProvisionEssAccess } from "@/features/employees/use-employees";
+import { apiErrorMessage } from "@/lib/api";
 
 const tabs = ["Overview", "Employment history", "Contacts", "Bank & statutory", "Compensation", "Documents"] as const;
 
@@ -158,6 +160,7 @@ export function EmployeeProfilePage() {
   );
   const [assignmentOpen, setAssignmentOpen] = useState(false);
   const { data: employee, isLoading } = useEmployee(params.id);
+  const provisionEss = useProvisionEssAccess(params.id);
   const { data: photoBlob } = useEmployeePhoto(employee?.photo_url);
   const photoUrl = useMemo(() => (photoBlob ? URL.createObjectURL(photoBlob) : null), [photoBlob]);
 
@@ -236,6 +239,7 @@ export function EmployeeProfilePage() {
       </div>
 
       {activeTab === "Overview" && (
+        <div className="space-y-4">
         <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[
             ["Official email", employee.official_email],
@@ -246,6 +250,38 @@ export function EmployeeProfilePage() {
             ["Employment type", employee.current_assignment?.employment_type?.name],
           ].map(([label, value]) => <div key={label} className="rounded-xl border border-slate-200 bg-card p-4 shadow-sm dark:border-slate-700"><dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt><dd className="mt-2 truncate text-sm font-semibold text-foreground">{value || "-"}</dd></div>)}
         </dl>
+        <Can permission="users.manage">
+          <section className="flex flex-col gap-4 rounded-xl border border-fruition-200 bg-fruition-50/50 p-4 sm:flex-row sm:items-center sm:justify-between dark:bg-fruition-950/10">
+            <div className="flex min-w-0 gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-fruition-100 text-fruition-700"><ShieldCheck className="size-5" /></span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">Employee self-service access</h3>{employee.ess_account && <StatusBadge status={employee.ess_account.status} />}</div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {employee.ess_account
+                    ? <>Login email: <span className="font-medium text-foreground">{employee.ess_account.email}</span>{employee.ess_account.status === "invited" ? " · Waiting for password setup" : ""}</>
+                    : "Send a secure password-setup invitation to the employee’s official or personal email."}
+                </p>
+              </div>
+            </div>
+            {employee.ess_account?.status !== "active" && (
+              <Button
+                className="shrink-0"
+                disabled={provisionEss.isPending}
+                onClick={async () => {
+                  try {
+                    const result = await provisionEss.mutateAsync();
+                    toast.success(result.message);
+                  } catch (error) {
+                    toast.error(apiErrorMessage(error));
+                  }
+                }}
+              >
+                <Mail className="size-4" /> {provisionEss.isPending ? "Sending…" : employee.ess_account ? "Resend invitation" : "Enable ESS access"}
+              </Button>
+            )}
+          </section>
+        </Can>
+        </div>
       )}
 
       {activeTab === "Employment history" && (

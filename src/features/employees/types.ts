@@ -49,6 +49,7 @@ export interface Employee {
   id: number;
   employee_number: string;
   user_id: number | null;
+  ess_account?: { email: string; status: "invited" | "active" | "disabled" } | null;
   first_name: string;
   middle_name: string | null;
   last_name: string;

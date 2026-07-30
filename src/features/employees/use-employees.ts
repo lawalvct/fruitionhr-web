@@ -137,6 +137,19 @@ export function useUpdateEmployee(id: number | string) {
   });
 }
 
+export function useProvisionEssAccess(id: number | string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      await ensureCsrf();
+      const { data } = await api.post<{ data: { email: string; status: string; message: string } }>(`/api/v1/employees/${id}/ess-access`);
+      return data.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: employeeKeys.detail(id) }),
+  });
+}
+
 export function useUploadEmployeePhoto() {
   const queryClient = useQueryClient();
 
