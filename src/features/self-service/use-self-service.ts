@@ -198,9 +198,30 @@ export function useClockOut() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (kioskToken?: string) => {
       await ensureCsrf();
-      return (await api.post<{ data: TodayAttendance }>("/api/v1/self/attendance/clock-out")).data.data;
+      return (await api.post<{ data: TodayAttendance }>(
+        "/api/v1/self/attendance/clock-out",
+        kioskToken ? { kiosk_token: kioskToken } : {},
+      )).data.data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(selfServiceKeys.attendanceToday, data);
+      queryClient.invalidateQueries({ queryKey: ["self-service", "attendance"] });
+    },
+  });
+}
+
+export function useKioskClock() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (kioskToken: string) => {
+      await ensureCsrf();
+      return (await api.post<{ data: TodayAttendance }>(
+        "/api/v1/self/attendance/kiosk-clock",
+        { kiosk_token: kioskToken },
+      )).data.data;
     },
     onSuccess: (data) => {
       queryClient.setQueryData(selfServiceKeys.attendanceToday, data);

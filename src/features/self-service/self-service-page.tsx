@@ -15,7 +15,7 @@ import {
   UserX,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { MoneyText } from "@/components/money-text";
@@ -34,6 +34,7 @@ import {
   useApplySelfLeave,
   useClockIn,
   useClockOut,
+  useKioskClock,
   useProfileUpdateRequests,
   useSelfAttendance,
   useSelfLeaveBalances,
@@ -499,19 +500,17 @@ function ClockWidget() {
   const { data: today, isLoading } = useTodayAttendance();
   const clockIn = useClockIn();
   const clockOut = useClockOut();
+  const kioskClock = useKioskClock();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const kioskToken = searchParams.get("kiosk_token") ?? undefined;
   const [scanOpen, setScanOpen] = useState(false);
-
-  if (isLoading) {
-    return <Skeleton className="h-20 w-full" />;
-  }
+  const processedKioskToken = useRef<string | null>(null);
 
   const state = today?.state ?? "not_clocked_in";
 
-  const handleClockIn = async (token?: string) => {
+  const handleClockIn = useCallback(async (token?: string) => {
     try {
       await clockIn.mutateAsync(token);
       toast.success("Clocked in.");
@@ -519,33 +518,45 @@ function ClockWidget() {
     } catch (error) {
       toast.error(apiErrorMessage(error));
     }
-  };
+  }, [clockIn, kioskToken, pathname, router]);
 
-  const handleClockOut = async () => {
+  const handleClockOut = useCallback(async (token?: string) => {
     try {
-      await clockOut.mutateAsync();
+      await clockOut.mutateAsync(token);
       toast.success("Clocked out.");
     } catch (error) {
       toast.error(apiErrorMessage(error));
     }
-  };
+  }, [clockOut]);
 
-  const handleScan = (token: string) => {
-    if (state === "clocked_in") {
-      void handleClockOut();
-    } else {
-      void handleClockIn(token);
+  const handleScan = useCallback(async (token: string) => {
+    try {
+      const result = await kioskClock.mutateAsync(token);
+      toast.success(result.state === "clocked_out" ? "Clocked out." : "Clocked in.");
+    } catch (error) {
+      toast.error(apiErrorMessage(error));
     }
-  };
+  }, [kioskClock]);
 
-  if (today?.self_clock_enabled === false) {
+  useEffect(() => {
+    if (isLoading || !today || !kioskToken || processedKioskToken.current === kioskToken) return;
+
+    processedKioskToken.current = kioskToken;
+    void handleScan(kioskToken).finally(() => router.replace(pathname, { scroll: false }));
+  }, [handleScan, isLoading, kioskToken, pathname, router, today]);
+
+  if (isLoading) {
+    return <Skeleton className="h-20 w-full" />;
+  }
+
+  if (today?.self_clock_enabled === false && today?.kiosk_scanning_enabled === false) {
     return (
       <div className="flex items-center gap-3 rounded-xl border bg-card p-4 shadow-sm">
         <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
           <Clock className="size-4" />
         </span>
         <p className="text-sm text-muted-foreground">
-          Self clock-in is disabled by your organisation. Ask HR how attendance is recorded.
+          Employee clock-in and QR kiosk scanning are disabled by your organisation. Ask HR how attendance is recorded.
         </p>
       </div>
     );
@@ -581,14 +592,14 @@ function ClockWidget() {
             Scan QR
           </Button>
         )}
-        {state === "not_clocked_in" && (
+        {state === "not_clocked_in" && today?.self_clock_enabled !== false && (
           <Button onClick={() => void handleClockIn(kioskToken)} disabled={clockIn.isPending}>
             <Clock className="size-4" />
             Clock In
           </Button>
         )}
-        {state === "clocked_in" && (
-          <Button variant="outline" onClick={handleClockOut} disabled={clockOut.isPending}>
+        {state === "clocked_in" && today?.self_clock_enabled !== false && (
+          <Button variant="outline" onClick={() => void handleClockOut()} disabled={clockOut.isPending}>
             <Clock className="size-4" />
             Clock Out
           </Button>

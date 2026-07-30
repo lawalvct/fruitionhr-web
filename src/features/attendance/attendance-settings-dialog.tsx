@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -29,11 +29,8 @@ export function AttendanceSettingsDialog({
 }) {
   const { data, isLoading } = useAttendanceSettings(open);
   const save = useSaveAttendanceSettings();
-  const [form, setForm] = useState<AttendanceSettings>(defaults);
-
-  useEffect(() => {
-    if (data) setForm(data);
-  }, [data]);
+  const [draft, setDraft] = useState<AttendanceSettings | null>(null);
+  const form = draft ?? data ?? defaults;
 
   const submit = async () => {
     try {
@@ -45,7 +42,10 @@ export function AttendanceSettingsDialog({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={(nextOpen) => {
+      if (!nextOpen) setDraft(null);
+      onOpenChange(nextOpen);
+    }}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>Attendance settings</SheetTitle>
@@ -65,12 +65,12 @@ export function AttendanceSettingsDialog({
                   type="checkbox"
                   className="mt-0.5 size-4 accent-fruition-700"
                   checked={form.self_clock_enabled}
-                  onChange={(event) => setForm({ ...form, self_clock_enabled: event.target.checked })}
+                  onChange={(event) => setDraft({ ...form, self_clock_enabled: event.target.checked })}
                 />
                 <span>
-                  <span className="block text-sm font-semibold">Employee self clock-in/out</span>
+                  <span className="block text-sm font-semibold">ESS clock-in/out buttons</span>
                   <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Lets employees clock themselves in and out from their own ESS attendance tab.
+                    Shows ordinary Clock In and Clock Out buttons in ESS. This does not disable QR scanning.
                   </span>
                 </span>
               </label>
@@ -80,13 +80,12 @@ export function AttendanceSettingsDialog({
                   type="checkbox"
                   className="mt-0.5 size-4 accent-fruition-700"
                   checked={form.kiosk_enabled}
-                  onChange={(event) => setForm({ ...form, kiosk_enabled: event.target.checked })}
+                  onChange={(event) => setDraft({ ...form, kiosk_enabled: event.target.checked })}
                 />
                 <span>
-                  <span className="block text-sm font-semibold">QR kiosk scanning</span>
+                  <span className="block text-sm font-semibold">QR kiosk clock-in/out</span>
                   <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Lets a shared kiosk display a scannable QR code for clock-in/out. Turning this off stops
-                    new codes from being generated on any kiosk display.
+                    Shows Scan QR in ESS and lets kiosk displays generate clock-in/out codes. This works independently of the ordinary buttons.
                   </span>
                 </span>
               </label>

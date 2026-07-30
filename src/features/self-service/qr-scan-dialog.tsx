@@ -27,17 +27,44 @@ export function QrScanDialog({
   onScan: (kioskToken: string) => void;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [scanRegion, setScanRegion] = useState<HTMLDivElement | null>(null);
   const handledRef = useRef(false);
+  const onScanRef = useRef(onScan);
+  const onOpenChangeRef = useRef(onOpenChange);
 
   useEffect(() => {
-    if (!open) return;
+    onScanRef.current = onScan;
+    onOpenChangeRef.current = onOpenChange;
+  }, [onOpenChange, onScan]);
+
+  useEffect(() => {
+    if (!open || !scanRegion) return;
 
     handledRef.current = false;
-    setError(null);
     const scanner = new Html5Qrcode(SCAN_REGION_ID);
+    let cancelled = false;
 
-    scanner
-      .start(
+    const stopScanner = async () => {
+      try {
+        if (scanner.isScanning) await scanner.stop();
+      } catch {
+        // Camera may still be starting or may already have stopped.
+      }
+      try {
+        scanner.clear();
+      } catch {
+        // The scan region may already have been removed by the dialog portal.
+      }
+    };
+
+    const startScanner = async () => {
+      // The callback ref confirms the portal element exists. Waiting one frame
+      // also lets Base UI finish its popup layout before html5-qrcode measures it.
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      if (cancelled || !document.body.contains(scanRegion)) return;
+
+      try {
+        await scanner.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: 240 },
         (decodedText) => {
@@ -48,25 +75,32 @@ export function QrScanDialog({
             return;
           }
           handledRef.current = true;
-          onScan(token);
-          onOpenChange(false);
+          onScanRef.current(token);
+          onOpenChangeRef.current(false);
         },
         () => {
           // Per-frame "no code found" — expected continuously while aiming.
         },
-      )
-      .catch(() => setError("Couldn't access the camera. Check your browser's camera permission and try again."));
+        );
+        if (cancelled) await stopScanner();
+      } catch {
+        if (!cancelled) setError("Couldn't access the camera. Check your browser's camera permission and try again.");
+      }
+    };
+
+    void startScanner();
 
     return () => {
-      scanner
-        .stop()
-        .catch(() => {})
-        .finally(() => scanner.clear());
+      cancelled = true;
+      void stopScanner();
     };
-  }, [open, onOpenChange, onScan]);
+  }, [open, scanRegion]);
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root open={open} onOpenChange={(nextOpen) => {
+      if (!nextOpen) setError(null);
+      onOpenChange(nextOpen);
+    }}>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/20 transition-opacity duration-150" />
         <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-md border bg-popover p-4 text-popover-foreground shadow-lg">
@@ -75,7 +109,7 @@ export function QrScanDialog({
             Point your camera at the kiosk screen to clock in or out.
           </Dialog.Description>
 
-          <div id={SCAN_REGION_ID} className="mt-4 overflow-hidden rounded-lg bg-black" />
+          <div ref={setScanRegion} id={SCAN_REGION_ID} className="mt-4 min-h-64 overflow-hidden rounded-lg bg-black" />
 
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
 
