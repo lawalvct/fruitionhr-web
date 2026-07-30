@@ -15,10 +15,10 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/page-header";
+import { PageLoader } from "@/components/page-loader";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { apiErrorMessage } from "@/lib/api";
 import {
   useApprovalAction,
@@ -222,7 +222,7 @@ export function ApprovalsPage() {
         </div>
 
         {isLoading ? (
-          <Skeleton className="h-56 w-full" />
+          <PageLoader label="Loading approval workflows…" />
         ) : visibleRequests.length === 0 ? (
           <EmptyState view={view} />
         ) : view === "queue" ? (

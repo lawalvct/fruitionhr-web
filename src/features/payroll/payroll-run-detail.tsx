@@ -8,11 +8,11 @@ import { Can } from "@/components/can";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { MoneyText } from "@/components/money-text";
 import { PageHeader } from "@/components/page-header";
+import { PageLoader } from "@/components/page-loader";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sheet,
   SheetContent,
@@ -67,7 +67,7 @@ export function PayrollRunDetail({ runId }: { runId: number }) {
     return employees.filter((row) => `${row.employee.name} ${row.employee.number}`.toLowerCase().includes(query));
   }, [employeeQuery, run?.employees]);
 
-  if (isLoading) return <Skeleton className="h-64 w-full" />;
+  if (isLoading) return <PageLoader label="Loading payroll details…" />;
 
   if (isError || !run) {
     return (

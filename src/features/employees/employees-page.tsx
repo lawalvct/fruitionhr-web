@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Can } from "@/components/can";
 import { DataTable } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
+import { PageLoader } from "@/components/page-loader";
 import { MoneyText } from "@/components/money-text";
 import { StatusBadge } from "@/components/status-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -211,6 +212,7 @@ export function EmployeesPage() {
           employment_status: status,
         }}
         emptyText="No employees match the current filters."
+        loadingContent={<PageLoader label="Loading employees…" />}
       />
 
       <div className="hidden items-center gap-2 text-sm text-muted-foreground empty:hidden">

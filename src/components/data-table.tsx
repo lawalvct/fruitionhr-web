@@ -8,7 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { ChevronDown, ChevronUp, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
@@ -35,12 +35,14 @@ export function DataTable<TData>({
   endpoint,
   filters = {},
   emptyText = "No records found.",
+  loadingContent,
 }: {
   columns: ColumnDef<TData>[];
   queryKey: readonly unknown[];
   endpoint: string;
   filters?: Record<string, string | number | null | undefined>;
   emptyText?: string;
+  loadingContent?: ReactNode;
 }) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -128,7 +130,9 @@ export function DataTable<TData>({
             ))}
           </thead>
           <tbody>
-            {tableQuery.isLoading
+            {tableQuery.isLoading && loadingContent ? (
+              <tr className="border-t"><td colSpan={columns.length}>{loadingContent}</td></tr>
+            ) : tableQuery.isLoading
               ? skeletonRows.map((_, rowIndex) => (
                   <tr key={rowIndex} className="border-t">
                     {columns.map((_, columnIndex) => (

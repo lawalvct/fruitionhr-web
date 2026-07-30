@@ -11,6 +11,7 @@ import { z } from "zod";
 import { Can } from "@/components/can";
 import { FormDialog } from "@/components/form-dialog";
 import { PageHeader } from "@/components/page-header";
+import { PageLoader } from "@/components/page-loader";
 import { StatusBadge } from "@/components/status-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -167,7 +168,7 @@ export function EmployeeProfilePage() {
   }, [photoUrl]);
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading employee...</p>;
+    return <PageLoader label="Loading employee profile…" />;
   }
 
   if (!employee) {

@@ -7,8 +7,8 @@ import { toast } from "sonner";
 import { Can } from "@/components/can";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { PageHeader } from "@/components/page-header";
+import { PageLoader } from "@/components/page-loader";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { apiErrorMessage } from "@/lib/api";
 import {
   useAttendanceGrid,
@@ -167,7 +167,7 @@ export function AttendancePage() {
 
       {/* Grid */}
       {isLoading ? (
-        <Skeleton className="h-64 w-full" />
+        <PageLoader label={`Loading ${periodLabel(period)} attendance…`} />
       ) : !grid?.rows.length ? (
         <div className="rounded-2xl border border-dashed p-10 text-center"><CalendarDays className="mx-auto size-8 text-muted-foreground" /><p className="mt-3 text-sm font-semibold">No employees to show</p><p className="mt-1 text-sm text-muted-foreground">Add employees and assign shifts before recording attendance.</p></div>
       ) : !visibleRows.length ? (

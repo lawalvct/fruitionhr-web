@@ -8,10 +8,10 @@ import { useMemo, useState } from "react";
 import { Can } from "@/components/can";
 import { MoneyText } from "@/components/money-text";
 import { PageHeader } from "@/components/page-header";
+import { PageLoader } from "@/components/page-loader";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { NewRunDialog } from "@/features/payroll/new-run-dialog";
 import { SalarySetupDialog } from "@/features/payroll/salary-setup-dialog";
 import { usePayrollRuns } from "@/features/payroll/use-payroll";
@@ -72,9 +72,7 @@ export function PayrollPage() {
       />
 
       {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-28" />)}
-        </div>
+        <PageLoader label="Loading payroll workspace…" />
       ) : isError ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
           <p className="text-sm text-muted-foreground">Payroll runs could not be loaded. Please try again.</p>

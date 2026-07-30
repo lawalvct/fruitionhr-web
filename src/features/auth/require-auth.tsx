@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 
 import { useMe } from "@/features/auth/use-auth";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageLoader } from "@/components/page-loader";
 
 /**
  * Client-side auth guard for protected layouts. Guests are bounced to /login
@@ -39,12 +39,7 @@ export function RequireAuth({
   }, [activationPath, denied, router]);
 
   if (isPending) {
-    return (
-      <div className="flex min-h-screen flex-col gap-4 p-8">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
+    return <div className="min-h-screen"><PageLoader label="Preparing your workspace…" /></div>;
   }
 
   if (denied || activationPath) return null;
