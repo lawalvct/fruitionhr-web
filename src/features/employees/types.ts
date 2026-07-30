@@ -69,6 +69,7 @@ export interface Employee {
   hired_at: string;
   exited_at: string | null;
   current_assignment?: EmployeeAssignment | null;
+  current_basic_salary?: number | null;
   employment_records?: EmployeeAssignment[];
   contacts?: EmployeeContact[];
   bank_accounts?: EmployeeBankAccount[];

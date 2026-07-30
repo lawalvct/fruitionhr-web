@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Can } from "@/components/can";
 import { DataTable } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
+import { MoneyText } from "@/components/money-text";
 import { StatusBadge } from "@/components/status-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { employeeKeys, useEmployeePhoto } from "@/features/employees/use-employe
 import { EmployeeImportDialog } from "@/features/employees/employee-import-dialog";
 import type { Employee } from "@/features/employees/types";
 import { api } from "@/lib/api";
+import { useCan } from "@/features/auth/use-auth";
 
 function initials(name: string) {
   return name
@@ -50,6 +52,7 @@ export function EmployeesPage() {
   const [exporting, setExporting] = useState<"xlsx" | "pdf" | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const { departments } = useCompanyOptions();
+  const canViewSalary = useCan("employees.view_salary");
 
   async function downloadExport(format: "xlsx" | "pdf") {
     setExporting(format);
@@ -102,6 +105,19 @@ export function EmployeesPage() {
         header: "Position",
         cell: ({ row }) => row.original.current_assignment?.position?.title ?? "-",
       },
+      ...(canViewSalary ? [{
+        id: "current_basic_salary",
+        header: "Current basic salary",
+        cell: ({ row }: { row: { original: Employee } }) => row.original.current_basic_salary != null ? (
+          <span className="whitespace-nowrap font-medium"><MoneyText kobo={row.original.current_basic_salary} /></span>
+        ) : (
+          <Can permission="employees.manage_salary">
+            <Button variant="ghost" size="icon" title={`Assign salary for ${row.original.full_name}`} aria-label={`Assign salary for ${row.original.full_name}`} render={<Link href={`/employees/${row.original.id}?tab=compensation`} />}>
+              <Pencil className="size-4" />
+            </Button>
+          </Can>
+        ),
+      } satisfies ColumnDef<Employee>] : []),
       {
         accessorKey: "employment_status",
         header: "Status",
@@ -125,7 +141,7 @@ export function EmployeesPage() {
         ),
       },
     ],
-    [],
+    [canViewSalary],
   );
 
   return (

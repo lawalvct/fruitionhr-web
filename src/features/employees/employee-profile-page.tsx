@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, MoveRight, Pencil } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -151,7 +151,10 @@ function AssignmentDialog({
 
 export function EmployeeProfilePage() {
   const params = useParams<{ id: string }>();
-  const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("Overview");
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>(() =>
+    searchParams.get("tab")?.toLowerCase() === "compensation" ? "Compensation" : "Overview",
+  );
   const [assignmentOpen, setAssignmentOpen] = useState(false);
   const { data: employee, isLoading } = useEmployee(params.id);
   const { data: photoBlob } = useEmployeePhoto(employee?.photo_url);

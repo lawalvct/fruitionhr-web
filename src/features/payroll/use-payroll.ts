@@ -10,7 +10,7 @@ export interface SalaryComponent {
   id: number;
   name: string;
   code: string;
-  type: "earning" | "deduction";
+  type: "earning" | "deduction" | "employer_contributor" | "fringe_benefit";
   calc_type: "fixed" | "percent_of_basic";
   percent: number | null;
   is_taxable: boolean;
@@ -32,6 +32,18 @@ export interface SalaryStructure {
     amount: number | null;
     percent: number | null;
   }>;
+}
+
+export function isReservedBasicSalaryComponent(component: {
+  component_name?: string | null;
+  component_code?: string | null;
+  name?: string | null;
+  code?: string | null;
+}): boolean {
+  const name = component.component_name ?? component.name ?? "";
+  const code = component.component_code ?? component.code ?? "";
+
+  return code.trim().toUpperCase() === "BASIC" || name.trim().toLowerCase() === "basic salary";
 }
 
 // ── Payroll runs ─────────────────────────────────────────────────────────────
@@ -94,6 +106,7 @@ export const payrollKeys = {
   run: (id: number) => ["payroll", "run", id] as const,
   preflight: (period: string) => ["payroll", "preflight", period] as const,
   employeeSalary: (employeeId: number | string) => ["payroll", "employee-salary", String(employeeId)] as const,
+  salaryHistory: (employeeId: number | string) => ["payroll", "salary-history", String(employeeId)] as const,
 };
 
 export function useSalaryComponents() {
@@ -152,15 +165,42 @@ export function useSaveSalaryStructure() {
   });
 }
 
+export function useDeleteSalaryStructure() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await ensureCsrf();
+      await api.delete(`/api/v1/salary-structures/${id}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: payrollKeys.structures }),
+  });
+}
+
 // Employee compensation
+export interface EmployeeSalaryComponentOverride {
+  salary_component_id: number;
+  mode: "override" | "additional" | "excluded";
+  amount: number | null;
+  percent: number | null;
+  component_name: string | null;
+  component_code: string | null;
+}
+
 export interface EmployeeSalary {
   id: number;
   basic_salary: number;
   effective_from: string;
+  effective_to: string | null;
+  change_type: "assignment" | "compensation_update" | "basic_salary_increase" | null;
+  change_reason: string | null;
+  status: "past" | "current" | "scheduled";
   structure: { id: number; name: string } | null;
+  component_overrides: EmployeeSalaryComponentOverride[];
   breakdown: {
     basic: number;
     earnings: Array<{ code: string; name: string; amount: number }>;
+    employer_contributions: Array<{ code: string; name: string; amount: number }>;
+    fringe_benefits: Array<{ code: string; name: string; amount: number }>;
     gross: number;
     taxable_pay: number;
     pensionable_pay: number;
@@ -175,14 +215,53 @@ export function useEmployeeSalary(employeeId: number | string) {
   });
 }
 
+export function useSalaryHistory(employeeId: number | string) {
+  return useQuery({
+    queryKey: payrollKeys.salaryHistory(employeeId),
+    queryFn: async () =>
+      (await api.get<{ data: EmployeeSalary[] }>(`/api/v1/employees/${employeeId}/salary-history`)).data.data,
+  });
+}
+
 export function useAssignSalary(employeeId: number | string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { basic_salary: number; salary_structure_id: number | null; effective_from: string }) => {
+    mutationFn: async (input: {
+      basic_salary: number;
+      salary_structure_id: number | null;
+      effective_from: string;
+      component_overrides: Array<{
+        salary_component_id: number;
+        mode: "override" | "additional" | "excluded";
+        amount?: number | null;
+        percent?: number | null;
+      }>;
+    }) => {
       await ensureCsrf();
       return (await api.post(`/api/v1/employees/${employeeId}/salary`, input)).data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: payrollKeys.employeeSalary(employeeId) }),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: payrollKeys.employeeSalary(employeeId) }),
+        qc.invalidateQueries({ queryKey: payrollKeys.salaryHistory(employeeId) }),
+      ]);
+    },
+  });
+}
+
+export function useIncreaseSalary(employeeId: number | string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { basic_salary: number; effective_from: string; change_reason: string }) => {
+      await ensureCsrf();
+      return (await api.post(`/api/v1/employees/${employeeId}/salary/increase`, input)).data;
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: payrollKeys.employeeSalary(employeeId) }),
+        qc.invalidateQueries({ queryKey: payrollKeys.salaryHistory(employeeId) }),
+      ]);
+    },
   });
 }
 
