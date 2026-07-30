@@ -22,6 +22,8 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   permission?: string | string[];
+  /** Only show personal ESS destinations when this user has a linked employee record. */
+  requiresEmployee?: boolean;
   /** Optional section label; consecutive items with the same group are bundled. */
   group?: string;
 }
@@ -320,6 +322,7 @@ export function AppShell({
   const canSearchEmployees = enableEmployeeSearch && (me?.is_super_admin || permissions.includes("employees.view"));
 
   const visibleNav = nav.filter((item) => {
+    if (item.requiresEmployee && !me?.employee) return false;
     if (!item.permission || me?.is_super_admin) return true;
     const required = Array.isArray(item.permission) ? item.permission : [item.permission];
     return required.some((permission) => permissions.includes(permission));

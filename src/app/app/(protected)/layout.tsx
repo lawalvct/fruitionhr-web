@@ -26,12 +26,6 @@ const nav: NavItem[] = [
   { group: "Workspace", href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { group: "Workspace", href: "/approvals", label: "Approvals", icon: ClipboardCheck, permission: "mss.approvals.view" },
 
-  { group: "Self-service", href: "/self-service/profile", label: "My Profile", icon: UserRound, permission: "ess.profile.view" },
-  { group: "Self-service", href: "/self-service/leave", label: "My Leave", icon: CalendarDays, permission: "ess.leave.view" },
-  { group: "Self-service", href: "/self-service/attendance", label: "My Attendance", icon: Clock, permission: "ess.attendance.view" },
-  { group: "Self-service", href: "/self-service/payslips", label: "My Payslips", icon: Receipt, permission: "ess.payslips.view" },
-  { group: "Self-service", href: "/self-service/loans", label: "My IOU & Loans", icon: HandCoins, permission: "ess.loans.view" },
-
   { group: "People", href: "/employees", label: "Employees", icon: Users, permission: "employees.view" },
   { group: "People", href: "/attendance", label: "Attendance", icon: CalendarClock, permission: "attendance.view" },
   { group: "People", href: "/leave", label: "Leave", icon: CalendarDays, permission: "leave.view" },
@@ -43,6 +37,12 @@ const nav: NavItem[] = [
   { group: "Money", href: "/loans", label: "Loans & advances", icon: HandCoins, permission: "loans.view" },
 
   { group: "Company", href: "/settings/organisation", label: "Settings", icon: Settings, permission: "company.view" },
+
+  { group: "My Self-Service", href: "/self-service/profile", label: "My Profile", icon: UserRound, permission: "ess.profile.view", requiresEmployee: true },
+  { group: "My Self-Service", href: "/self-service/leave", label: "My Leave", icon: CalendarDays, permission: "ess.leave.view", requiresEmployee: true },
+  { group: "My Self-Service", href: "/self-service/attendance", label: "My Attendance", icon: Clock, permission: "ess.attendance.view", requiresEmployee: true },
+  { group: "My Self-Service", href: "/self-service/payslips", label: "My Payslips", icon: Receipt, permission: "ess.payslips.view", requiresEmployee: true },
+  { group: "My Self-Service", href: "/self-service/loans", label: "My IOU & Loans", icon: HandCoins, permission: "ess.loans.view", requiresEmployee: true },
 ];
 
 export default function TenantProtectedLayout({
