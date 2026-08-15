@@ -32,6 +32,14 @@ import { apiErrorMessage } from '@/lib/api';
 const allTabs = ['Reviews', 'Goals', 'PIPs', 'Cycles', 'Setup'] as const;
 type Tab = (typeof allTabs)[number];
 
+const tabDescriptions: Record<Tab, string> = {
+  Reviews: 'View appraisals, complete reviews, and follow results',
+  Goals: 'Set measurable goals and record progress',
+  PIPs: 'Track improvement plans, milestones, and outcomes',
+  Cycles: 'Schedule and control when appraisals take place',
+  Setup: 'Configure KPIs, rating scales, and templates',
+};
+
 function Empty({ children }: { children: React.ReactNode }) {
   return <p className='rounded-md border border-dashed px-4 py-10 text-center text-sm text-muted-foreground'>{children}</p>;
 }
@@ -180,21 +188,24 @@ export function PerformancePage() {
         )}
       </div>
 
-      <div role='tablist' aria-label='Performance sections' className='flex gap-1 overflow-x-auto border-b'>
-        {tabs.map((item) => (
-          <button
-            key={item}
-            id={`performance-tab-${item.toLowerCase()}`}
-            type='button'
-            role='tab'
-            aria-selected={tab === item}
-            aria-controls={`performance-panel-${item.toLowerCase()}`}
-            onClick={() => setTab(item)}
-            className={'border-b-2 px-3 py-2 text-sm font-medium transition-colors ' + (tab === item ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}
-          >
-            {item}
-          </button>
-        ))}
+      <div className='space-y-2'>
+        <div role='tablist' aria-label='Performance sections' className='flex gap-1 overflow-x-auto border-b'>
+          {tabs.map((item) => (
+            <button
+              key={item}
+              id={`performance-tab-${item.toLowerCase()}`}
+              type='button'
+              role='tab'
+              aria-selected={tab === item}
+              aria-controls={`performance-panel-${item.toLowerCase()}`}
+              onClick={() => setTab(item)}
+              className={'border-b-2 px-3 py-2 text-sm font-medium transition-colors ' + (tab === item ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+        <p className='text-sm text-muted-foreground' aria-live='polite'>{tabDescriptions[tab]}</p>
       </div>
 
       {tab === 'Reviews' && (

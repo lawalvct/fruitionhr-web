@@ -23,7 +23,7 @@ const columns = [
   {
     title: "Company",
     links: [
-      { href: "/recruitment", label: "Recruitment" },
+      { href: "/careers", label: "Careers" },
       { href: "/blog", label: "Blog" },
       { href: "/contact", label: "Contact" },
       { href: `mailto:${site.contactEmail}?subject=Demo%20request`, label: "Request a demo" },

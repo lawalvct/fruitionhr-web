@@ -3,7 +3,17 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronsUpDown, LoaderCircle, LogOut, Menu, Search, UserRound, type LucideIcon } from "lucide-react";
+import {
+  ChevronsUpDown,
+  LoaderCircle,
+  LogOut,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Search,
+  UserRound,
+  type LucideIcon,
+} from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useLogout, useMe } from "@/features/auth/use-auth";
@@ -106,10 +116,12 @@ function SidebarNav({
   items,
   pathname,
   onNavigate,
+  collapsed = false,
 }: {
   items: NavItem[];
   pathname: string;
   onNavigate?: () => void;
+  collapsed?: boolean;
 }) {
   // Bundle consecutive items sharing a group label.
   const sections: { group?: string; items: NavItem[] }[] = [];
@@ -120,13 +132,16 @@ function SidebarNav({
   }
 
   return (
-    <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
+    <nav className={cn("sidebar-scrollbar flex flex-1 flex-col gap-4 overflow-y-auto py-4", collapsed ? "px-2" : "px-3")}>
       {sections.map((section, index) => (
         <div key={section.group ?? `section-${index}`} className="grid gap-0.5">
-          {section.group && (
+          {section.group && !collapsed && (
             <p className="px-3 pb-1.5 text-[10px] font-semibold tracking-[0.14em] text-fruition-100/40 uppercase">
               {section.group}
             </p>
+          )}
+          {section.group && collapsed && index > 0 && (
+            <span aria-hidden="true" className="mx-2 mb-2 h-px bg-white/10" />
           )}
           {section.items.map((item) => {
             const active =
@@ -136,8 +151,11 @@ function SidebarNav({
                 key={item.href}
                 href={item.href}
                 onClick={onNavigate}
+                title={collapsed ? item.label : undefined}
+                aria-label={collapsed ? item.label : undefined}
                 className={cn(
-                  "group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
+                  "group relative flex items-center rounded-lg py-2 text-sm font-medium transition-all duration-150",
+                  collapsed ? "justify-center px-2" : "gap-2.5 px-3",
                   active
                     ? "bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
                     : "text-fruition-100/65 hover:bg-white/5 hover:text-white",
@@ -156,7 +174,7 @@ function SidebarNav({
                     active ? "text-fruition-300" : "text-fruition-100/50 group-hover:text-fruition-200",
                   )}
                 />
-                {item.label}
+                {!collapsed && item.label}
               </Link>
             );
           })}
@@ -169,16 +187,24 @@ function SidebarNav({
 function SidebarBrand({
   title,
   companyName,
-  logoUrl,
+  logoSrc,
+  collapsed = false,
+  mobile = false,
 }: {
   title: string;
   companyName?: string;
-  logoUrl?: string | null;
+  logoSrc?: string | null;
+  collapsed?: boolean;
+  mobile?: boolean;
 }) {
-  const logoSrc = useCompanyLogoImage(logoUrl);
-
   return (
-    <div className="flex h-16 items-center gap-2.5 border-b border-white/10 px-4">
+    <div
+      className={cn(
+        "flex h-16 items-center border-b border-white/10",
+        collapsed ? "justify-center px-3" : "gap-2.5 px-4",
+        mobile && "pr-12",
+      )}
+    >
       {logoSrc ? (
         // eslint-disable-next-line @next/next/no-img-element -- authenticated blob URL, not a static asset
         <img
@@ -196,9 +222,11 @@ function SidebarBrand({
           priority
         />
       )}
-      <span className="hidden min-w-0 truncate text-[15px] font-extrabold tracking-tight text-white md:block">
-        {companyName ?? title}
-      </span>
+      {!collapsed && (
+        <span className="min-w-0 truncate text-[15px] font-extrabold tracking-tight text-white">
+          {companyName ?? title}
+        </span>
+      )}
     </div>
   );
 }
@@ -228,7 +256,7 @@ function EmployeeSearch({ enabled }: { enabled: boolean }) {
   };
 
   return (
-    <div ref={searchRef} className="relative min-w-0 flex-1 sm:max-w-md">
+    <div ref={searchRef} className="relative min-w-0 flex-1 sm:max-w-lg">
       <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
       <input
         value={query}
@@ -243,7 +271,7 @@ function EmployeeSearch({ enabled }: { enabled: boolean }) {
         aria-autocomplete="list"
         aria-expanded={isOpen}
         aria-controls="employee-search-results"
-        className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50/80 pl-9 pr-9 text-sm outline-none transition-colors placeholder:text-slate-400 focus:border-fruition-400 focus:bg-white focus:ring-2 focus:ring-fruition-500/20"
+        className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-9 pr-9 text-sm outline-none transition-colors placeholder:text-slate-400 focus:border-fruition-400 focus:bg-white focus:ring-2 focus:ring-fruition-500/20"
       />
       {isFetching && <LoaderCircle className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-fruition-600" />}
 
@@ -316,10 +344,16 @@ export function AppShell({
   const pathname = usePathname();
   const { data: me } = useMe();
   const avatarSrc = useAvatarImage(me?.avatar_url);
+  const companyLogoSrc = useCompanyLogoImage(me?.tenant?.logo_url);
   const permissions = me?.permissions ?? [];
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [registeredPageTitle, setRegisteredPageTitle] = useState<string | null>(null);
   const canSearchEmployees = enableEmployeeSearch && (me?.is_super_admin || permissions.includes("employees.view"));
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((collapsed) => !collapsed);
+  };
 
   const visibleNav = nav.filter((item) => {
     if (item.requiresEmployee && !me?.employee) return false;
@@ -343,11 +377,35 @@ export function AppShell({
 
   return (
     <PageTitleProvider onTitleChange={setRegisteredPageTitle}>
-    <div className="flex min-h-screen bg-[#f8fafc]">
+    <div className="flex min-h-screen bg-[#f6f8fa]">
       {/* Desktop sidebar */}
-      <aside className={cn("hidden w-62 shrink-0 flex-col md:flex", sidebarSurface)}>
-        <SidebarBrand title={title} companyName={me?.tenant?.name} logoUrl={me?.tenant?.logo_url} />
-        <SidebarNav items={visibleNav} pathname={pathname} />
+      <aside
+        className={cn(
+          "sticky top-0 hidden h-screen shrink-0 flex-col transition-[width] duration-200 md:flex",
+          sidebarCollapsed ? "w-20" : "w-64",
+          sidebarSurface,
+        )}
+      >
+        <SidebarBrand
+          title={title}
+          companyName={me?.tenant?.name}
+          logoSrc={companyLogoSrc}
+          collapsed={sidebarCollapsed}
+        />
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="absolute -right-3 top-20 z-20 grid size-7 place-items-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-fruition-200 hover:text-fruition-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fruition-500/30"
+        >
+          {sidebarCollapsed ? (
+            <PanelLeftOpen className="size-3.5" />
+          ) : (
+            <PanelLeftClose className="size-3.5" />
+          )}
+        </button>
+        <SidebarNav items={visibleNav} pathname={pathname} collapsed={sidebarCollapsed} />
 
         {/* user card */}
         <div className="border-t border-white/10 p-3">
@@ -359,7 +417,10 @@ export function AppShell({
                 aria-haspopup="menu"
                 aria-expanded={open}
                 onClick={toggle}
-                className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors duration-150 hover:bg-white/5"
+                className={cn(
+                  "flex w-full items-center rounded-xl py-2 text-left transition-colors duration-150 hover:bg-white/5",
+                  sidebarCollapsed ? "justify-center px-1" : "gap-2.5 px-2.5",
+                )}
               >
                 <Avatar className="size-8 ring-2 ring-fruition-400/40">
                   {avatarSrc && <AvatarImage src={avatarSrc} alt={me?.name ?? "You"} />}
@@ -367,15 +428,19 @@ export function AppShell({
                     {initials}
                   </AvatarFallback>
                 </Avatar>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-white">
-                    {me?.name}
-                  </span>
-                  <span className="block truncate text-xs capitalize text-fruition-100/50">
-                    {role ?? me?.email}
-                  </span>
-                </span>
-                <ChevronsUpDown className="size-3.5 shrink-0 text-fruition-100/40" />
+                {!sidebarCollapsed && (
+                  <>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-white">
+                        {me?.name}
+                      </span>
+                      <span className="block truncate text-xs capitalize text-fruition-100/50">
+                        {role ?? me?.email}
+                      </span>
+                    </span>
+                    <ChevronsUpDown className="size-3.5 shrink-0 text-fruition-100/40" />
+                  </>
+                )}
               </button>
             )}
           />
@@ -389,7 +454,12 @@ export function AppShell({
           className={cn("w-72 gap-0 border-white/10 p-0", sidebarSurface)}
         >
           <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <SidebarBrand title={title} companyName={me?.tenant?.name} logoUrl={me?.tenant?.logo_url} />
+          <SidebarBrand
+            title={title}
+            companyName={me?.tenant?.name}
+            logoSrc={companyLogoSrc}
+            mobile
+          />
           <SidebarNav
             items={visibleNav}
             pathname={pathname}
@@ -399,8 +469,8 @@ export function AppShell({
       </Sheet>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Sticky glass header */}
-        <header className="sticky top-0 z-40 flex h-14 items-center justify-between gap-3 border-b border-slate-200/70 bg-white/80 px-4 backdrop-blur-md sm:px-6">
+        {/* Sticky application header */}
+        <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur-md sm:px-6 xl:px-8">
           <div className="flex min-w-0 shrink-0 items-center gap-2">
             <button
               type="button"
@@ -416,7 +486,7 @@ export function AppShell({
           </div>
 
           {canSearchEmployees && (
-            <div className="hidden min-w-0 flex-1 justify-center px-2 sm:flex lg:justify-end lg:px-4">
+            <div className="hidden min-w-0 flex-1 justify-center px-4 sm:flex">
               <EmployeeSearch enabled={canSearchEmployees} />
             </div>
           )}
@@ -446,8 +516,8 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto w-full max-w-7xl">{children}</div>
+        <main className="flex-1 p-4 sm:p-5 xl:p-6">
+          <div className="mx-auto w-full max-w-[1600px]">{children}</div>
         </main>
         <footer className="border-t border-slate-200/70 bg-white/70 px-4 py-4 text-center text-xs text-slate-400 sm:px-6 lg:px-8">
           <span className="font-semibold text-slate-500">FruitionHR</span>

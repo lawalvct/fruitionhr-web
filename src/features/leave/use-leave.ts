@@ -116,9 +116,13 @@ export function useDeleteLeaveType() {
   });
 }
 
-export function useLeaveRequests(filters?: { status?: string; employee_id?: number }) {
+export function useLeaveRequests(
+  filters?: { status?: string; employee_id?: number },
+  enabled = true,
+) {
   return useQuery({
     queryKey: leaveKeys.requests(filters),
+    enabled,
     queryFn: async () => {
       const { data } = await api.get<{ data: LeaveRequestItem[] }>("/api/v1/leave-requests", {
         params: filters,

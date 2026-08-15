@@ -1,8 +1,6 @@
 import Image from "next/image";
 import { CheckCircle2 } from "lucide-react";
 
-import { ProductMockup } from "@/features/marketing/product-mockup";
-
 const bullets = [
   "PAYE, Pension, NHF & NSITF calculated automatically",
   "Attendance, leave and approvals in one place",
@@ -45,7 +43,16 @@ export function AuthSidePanel() {
           businesses.
         </p>
         <div className="mt-9">
-          <ProductMockup />
+          <Image
+            src="/login_image.png"
+            alt="FruitionHR workspace preview"
+            width={460}
+            height={307}
+            className="h-auto w-full rounded-2xl border border-white/15 shadow-2xl shadow-fruition-950/30"
+            sizes="(min-width: 1280px) 460px, 40vw"
+            unoptimized
+            priority
+          />
         </div>
       </div>
 
