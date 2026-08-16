@@ -103,3 +103,101 @@ export interface ReportsOverview {
   performance: PerformanceReport | null;
   recruitment: RecruitmentReport | null;
 }
+
+export const REPORT_MODULES = [
+  "workforce",
+  "attendance",
+  "leave",
+  "payroll",
+  "performance",
+  "recruitment",
+] as const;
+
+export type ReportModule = (typeof REPORT_MODULES)[number];
+
+export type ReportValueFormat =
+  | "text"
+  | "date"
+  | "datetime"
+  | "status"
+  | "number"
+  | "percent"
+  | "money"
+  | "basis_points"
+  | "minutes";
+
+export type ReportScalar = string | number | boolean | null;
+export type ReportRecord = Record<string, ReportScalar>;
+
+export interface ReportFilterOption {
+  value: string | number;
+  label: string;
+}
+
+export interface ReportAnalysisFilters {
+  available: {
+    departments?: ReportFilterOption[];
+    periods?: ReportFilterOption[];
+    statuses?: ReportFilterOption[];
+    stages?: ReportFilterOption[];
+  };
+  applied: {
+    department_id?: number | null;
+    period?: string | null;
+    status?: string | null;
+    stage?: string | null;
+  };
+}
+
+export interface ReportAnalysisMetric {
+  key: string;
+  label: string;
+  value: number | null;
+  format: ReportValueFormat;
+  hint?: string;
+}
+
+export interface ReportAnalysisSeries {
+  key: string;
+  label: string;
+  format: ReportValueFormat;
+}
+
+export interface ReportAnalysisDataset {
+  key: string;
+  title: string;
+  type: "line" | "bar" | "donut";
+  x_key: string;
+  series: ReportAnalysisSeries[];
+  data: ReportRecord[];
+}
+
+export interface ReportAnalysisTable {
+  title: string;
+  columns: Array<{
+    key: string;
+    label: string;
+    format: ReportValueFormat;
+  }>;
+  rows: ReportRecord[];
+  meta: {
+    count: number;
+    limit: number;
+    limited: boolean;
+  };
+}
+
+export interface ReportAnalysis {
+  module: ReportModule;
+  title: string;
+  year: number;
+  generated_at: string;
+  filters: ReportAnalysisFilters;
+  metrics: ReportAnalysisMetric[];
+  datasets: ReportAnalysisDataset[];
+  table: ReportAnalysisTable;
+}
+
+export function isReportModule(value: string): value is ReportModule {
+  return (REPORT_MODULES as readonly string[]).includes(value);
+}

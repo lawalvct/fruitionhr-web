@@ -83,7 +83,7 @@ function ReportPanel({
             </div>
           </div>
           <Button size="sm" variant="ghost" render={<Link href={href} />}>
-            Open <ArrowUpRight className="size-3.5" />
+            View report <ArrowUpRight className="size-3.5" />
           </Button>
         </div>
       </CardHeader>
@@ -352,7 +352,7 @@ export function ReportsPage() {
                 title="Workforce movement"
                 description={`Hiring, exits, and current department distribution in ${year}`}
                 icon={Users}
-                href="/employees"
+                href={`/reports/workforce?year=${year}`}
               >
                 <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(220px,0.65fr)]">
                   <MonthlyBars
@@ -375,7 +375,7 @@ export function ReportsPage() {
                 title="Attendance consistency"
                 description="Present and absent days from finalized monthly attendance"
                 icon={CalendarCheck2}
-                href="/attendance"
+                href={`/reports/attendance?year=${year}`}
               >
                 <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <SummaryStat label="Present days" value={data.attendance.present_days.toLocaleString()} />
@@ -399,7 +399,7 @@ export function ReportsPage() {
                 title="Leave utilization"
                 description="Approved leave days and the most-used leave types"
                 icon={CalendarDays}
-                href="/leave"
+                href={`/reports/leave?year=${year}`}
               >
                 <div className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(220px,0.75fr)]">
                   <MonthlyBars
@@ -419,7 +419,7 @@ export function ReportsPage() {
                 title="Payroll cost trend"
                 description="Completed payroll only; drafts and reversals are excluded"
                 icon={Banknote}
-                href="/payroll"
+                href={`/reports/payroll?year=${year}`}
               >
                 <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <SummaryStat label="Gross pay" value={<MoneyText kobo={data.payroll.total_gross} />} />
@@ -443,7 +443,7 @@ export function ReportsPage() {
                 title="Performance outcomes"
                 description="Finalized appraisal scores and grade distribution"
                 icon={Gauge}
-                href="/performance"
+                href={`/reports/performance?year=${year}`}
               >
                 <div className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(220px,0.75fr)]">
                   <MonthlyBars
@@ -469,7 +469,7 @@ export function ReportsPage() {
                 title="Recruitment funnel"
                 description="Candidate volume, hiring outcomes, and current pipeline stages"
                 icon={BriefcaseBusiness}
-                href="/recruitment"
+                href={`/reports/recruitment?year=${year}`}
               >
                 <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <SummaryStat label="Applications" value={data.recruitment.applications.toLocaleString()} />
