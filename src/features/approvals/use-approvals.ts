@@ -39,9 +39,10 @@ export interface ApprovalRequest {
 
 export const APPROVALS_KEY = ["approvals"] as const;
 
-export function useApprovals() {
+export function useApprovals(enabled = true) {
   return useQuery({
     queryKey: APPROVALS_KEY,
+    enabled,
     queryFn: async () => {
       const { data } = await api.get<{
         data: { pending_for_me: ApprovalRequest[]; my_requests: ApprovalRequest[] };

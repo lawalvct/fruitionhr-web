@@ -5,6 +5,7 @@ import axios from "axios";
 
 import { api, ensureCsrf } from "@/lib/api";
 import type { LoginInput, Me, RegisterInput } from "@/types/auth";
+import { tenantHomeDestination } from "./access-destinations";
 
 export const ME_QUERY_KEY = ["me"] as const;
 
@@ -16,7 +17,7 @@ export function authDestination(me: Me): string {
     return "/onboarding";
   }
 
-  return "/dashboard";
+  return tenantHomeDestination(me);
 }
 
 async function fetchMe(): Promise<Me | null> {

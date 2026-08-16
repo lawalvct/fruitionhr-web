@@ -2,6 +2,7 @@
 
 import {
   Banknote,
+  BarChart3,
   BriefcaseBusiness,
   CalendarClock,
   CalendarDays,
@@ -12,6 +13,7 @@ import {
   LayoutDashboard,
   Receipt,
   Settings,
+  ShieldCheck,
   Timer,
   UserRound,
   Users,
@@ -19,12 +21,14 @@ import {
 import type { ReactNode } from "react";
 
 import { RequireAuth } from "@/features/auth/require-auth";
+import { DASHBOARD_PERMISSIONS } from "@/features/auth/access-destinations";
 import { AppShell, type NavItem } from "@/components/app-shell";
 
 // Grouped sidebar nav; items are permission-gated per user.
 const nav: NavItem[] = [
-  { group: "Workspace", href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { group: "Workspace", href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, permission: DASHBOARD_PERMISSIONS },
   { group: "Workspace", href: "/approvals", label: "Approvals", icon: ClipboardCheck, permission: "mss.approvals.view" },
+  { group: "Workspace", href: "/reports", label: "Reports", icon: BarChart3, permission: "reports.view" },
 
   { group: "People", href: "/employees", label: "Employees", icon: Users, permission: "employees.view" },
   { group: "People", href: "/attendance", label: "Attendance", icon: CalendarClock, permission: "attendance.view" },
@@ -37,6 +41,7 @@ const nav: NavItem[] = [
   { group: "Money", href: "/loans", label: "Loans & advances", icon: HandCoins, permission: "loans.view" },
 
   { group: "Company", href: "/settings/organisation", label: "Settings", icon: Settings, permission: "company.view" },
+  { group: "Company", href: "/settings/access", label: "Access control", icon: ShieldCheck, permission: "roles.manage" },
 
   { group: "My Self-Service", href: "/self-service/profile", label: "My Profile", icon: UserRound, permission: "ess.profile.view", requiresEmployee: true },
   { group: "My Self-Service", href: "/self-service/leave", label: "My Leave", icon: CalendarDays, permission: "ess.leave.view", requiresEmployee: true },

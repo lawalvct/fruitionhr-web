@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   ArrowRight,
@@ -18,12 +19,14 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import type { CSSProperties, ReactNode } from "react";
+import { useEffect, type CSSProperties, type ReactNode } from "react";
 
 import { MoneyText } from "@/components/money-text";
+import { PageLoader } from "@/components/page-loader";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApprovals } from "@/features/approvals/use-approvals";
+import { tenantHomeDestination } from "@/features/auth/access-destinations";
 import { useMe } from "@/features/auth/use-auth";
 import { DashboardWelcome } from "@/features/dashboard/dashboard-welcome";
 import {
@@ -104,6 +107,7 @@ interface ActivityItem {
 }
 
 export default function TenantDashboardPage() {
+  const router = useRouter();
   const { data: me } = useMe();
   const permissions = me?.permissions ?? [];
   const can = (permission: string) =>
@@ -116,11 +120,23 @@ export default function TenantDashboardPage() {
   const attendance = useAttendanceToday(can("attendance.view"));
   const payroll = useLatestPayrollRun(can("payroll.view"));
   const performance = usePerformanceSummary(null, can("performance.view"));
-  const approvals = useApprovals();
+  const canViewApprovals = can("mss.approvals.view");
+  const approvals = useApprovals(canViewApprovals);
   const approvedLeave = useLeaveRequests(
     { status: "approved" },
     can("leave.view"),
   );
+
+  const homeDestination = me ? tenantHomeDestination(me) : "/dashboard";
+  const shouldRedirect = Boolean(me && homeDestination !== "/dashboard");
+
+  useEffect(() => {
+    if (shouldRedirect) router.replace(homeDestination);
+  }, [homeDestination, router, shouldRedirect]);
+
+  if (shouldRedirect) {
+    return <PageLoader label="Opening your workspace..." />;
+  }
 
   const today = new Date().toISOString().slice(0, 10);
   const outToday = can("leave.view")
@@ -244,7 +260,7 @@ export default function TenantDashboardPage() {
         </section>
       </Rise>
 
-      {setupSkipped && (
+      {setupSkipped && me?.roles?.includes("owner") && (
         <Rise index={1}>
           <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50/80 px-5 py-4">
             <div>
@@ -290,21 +306,23 @@ export default function TenantDashboardPage() {
           </Rise>
         )}
 
-        <Rise index={3} className="h-full">
-          <StatCard
-            label="Pending approvals"
-            value={pendingApprovals.length}
-            caption={
-              pendingApprovals.length
-                ? "Items waiting for your decision"
-                : "You are all caught up"
-            }
-            icon={ClipboardCheck}
-            href="/approvals"
-            loading={approvals.isLoading}
-            tone="amber"
-          />
-        </Rise>
+        {canViewApprovals && (
+          <Rise index={3} className="h-full">
+            <StatCard
+              label="Pending approvals"
+              value={pendingApprovals.length}
+              caption={
+                pendingApprovals.length
+                  ? "Items waiting for your decision"
+                  : "You are all caught up"
+              }
+              icon={ClipboardCheck}
+              href="/approvals"
+              loading={approvals.isLoading}
+              tone="amber"
+            />
+          </Rise>
+        )}
 
         {can("payroll.view") && (
           <Rise index={4} className="h-full">
@@ -406,6 +424,7 @@ export default function TenantDashboardPage() {
           </PanelCard>
         </Rise>
 
+        {canViewApprovals && (
         <Rise index={9} className="h-full xl:col-span-4">
           <PanelCard
             title="Needs your approval"
@@ -460,6 +479,7 @@ export default function TenantDashboardPage() {
             )}
           </PanelCard>
         </Rise>
+        )}
 
         {can("leave.view") && (
           <Rise index={10} className="h-full lg:col-span-2 xl:col-span-3">
@@ -518,7 +538,9 @@ export default function TenantDashboardPage() {
               <div>
                 <p className="text-sm font-semibold text-slate-900">Your workspace is ready to grow</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Add employees and begin using HR workflows to populate your dashboard.
+                  {can("employees.create")
+                    ? "Add employees and begin using HR workflows to populate your dashboard."
+                    : "Activity from the modules you can access will appear here."}
                 </p>
               </div>
             </div>
