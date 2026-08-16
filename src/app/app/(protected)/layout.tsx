@@ -8,6 +8,7 @@ import {
   CalendarDays,
   ClipboardCheck,
   Clock,
+  CreditCard,
   Gauge,
   HandCoins,
   LayoutDashboard,
@@ -23,6 +24,7 @@ import type { ReactNode } from "react";
 import { RequireAuth } from "@/features/auth/require-auth";
 import { DASHBOARD_PERMISSIONS } from "@/features/auth/access-destinations";
 import { AppShell, type NavItem } from "@/components/app-shell";
+import { SubscriptionBanner } from "@/features/billing/subscription-banner";
 
 // Grouped sidebar nav; items are permission-gated per user.
 const nav: NavItem[] = [
@@ -40,6 +42,7 @@ const nav: NavItem[] = [
   { group: "Money", href: "/overtime", label: "Overtime", icon: Timer, permission: "overtime.view" },
   { group: "Money", href: "/loans", label: "Loans & advances", icon: HandCoins, permission: "loans.view" },
 
+  { group: "Company", href: "/billing", label: "Billing", icon: CreditCard, permission: "company.manage" },
   { group: "Company", href: "/settings/organisation", label: "Settings", icon: Settings, permission: "company.view" },
   { group: "Company", href: "/settings/access", label: "Access control", icon: ShieldCheck, permission: "roles.manage" },
 
@@ -57,7 +60,8 @@ export default function TenantProtectedLayout({
 }) {
   return (
     <RequireAuth>
-      <AppShell title="FruitionHR" nav={nav} enableEmployeeSearch>
+      <AppShell title="FruitionHR" nav={nav} enableEmployeeSearch showBillingStatus>
+        <SubscriptionBanner />
         {children}
       </AppShell>
     </RequireAuth>

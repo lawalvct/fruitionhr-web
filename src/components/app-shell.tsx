@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import { PageTitleProvider } from "@/components/page-title-context";
+import { SubscriptionPill } from "@/features/billing/subscription-pill";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 
 export interface NavItem {
@@ -190,18 +191,21 @@ function SidebarBrand({
   logoSrc,
   collapsed = false,
   mobile = false,
+  showBillingStatus = false,
 }: {
   title: string;
   companyName?: string;
   logoSrc?: string | null;
   collapsed?: boolean;
   mobile?: boolean;
+  /** Tenant surface only — the admin console has no subscription of its own. */
+  showBillingStatus?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "flex h-16 items-center border-b border-white/10",
-        collapsed ? "justify-center px-3" : "gap-2.5 px-4",
+        "flex min-h-16 items-center border-b border-white/10 py-2",
+        collapsed ? "flex-col justify-center gap-1.5 px-3" : "gap-2.5 px-4",
         mobile && "pr-12",
       )}
     >
@@ -222,11 +226,16 @@ function SidebarBrand({
           priority
         />
       )}
-      {!collapsed && (
-        <span className="min-w-0 truncate text-[15px] font-extrabold tracking-tight text-white">
-          {companyName ?? title}
-        </span>
-      )}
+      {collapsed
+        ? showBillingStatus && <SubscriptionPill collapsed />
+        : (
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate text-[15px] font-extrabold tracking-tight text-white">
+                {companyName ?? title}
+              </span>
+              {showBillingStatus && <SubscriptionPill />}
+            </span>
+          )}
     </div>
   );
 }
@@ -334,11 +343,13 @@ export function AppShell({
   title,
   nav,
   enableEmployeeSearch = false,
+  showBillingStatus = false,
   children,
 }: {
   title: string;
   nav: NavItem[];
   enableEmployeeSearch?: boolean;
+  showBillingStatus?: boolean;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -390,6 +401,7 @@ export function AppShell({
           title={title}
           companyName={me?.tenant?.name}
           logoSrc={companyLogoSrc}
+          showBillingStatus={showBillingStatus}
           collapsed={sidebarCollapsed}
         />
         <button
@@ -457,6 +469,7 @@ export function AppShell({
           <SidebarBrand
             title={title}
             companyName={me?.tenant?.name}
+            showBillingStatus={showBillingStatus}
             logoSrc={companyLogoSrc}
             mobile
           />
