@@ -62,9 +62,14 @@ export interface BillingPayment {
   created_at: string | null;
 }
 
+export interface PaymentMethod {
+  slug: string;
+  label: string;
+}
+
 export interface PlansResponse {
   data: BillingPlan[];
-  meta: { employees: number; gateways: string[]; currency: string };
+  meta: { employees: number; gateways: PaymentMethod[]; currency: string };
 }
 
 export interface SubscriptionResponse {
@@ -72,7 +77,9 @@ export interface SubscriptionResponse {
   meta: {
     employees: number;
     renewal_quote: PlanQuote | null;
-    gateways: string[];
+    gateways: PaymentMethod[];
+    /** Preselected method when the platform offers more than one. */
+    default_gateway?: string | null;
     /** The cheapest plan that fits, when the current one has been outgrown. */
     suggested_plan?: BillingPlan | null;
   };

@@ -97,3 +97,41 @@ export function useUpdatePlan(id: number) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: adminBillingKeys.all }),
   });
 }
+
+export interface GatewayRow {
+  slug: string;
+  label: string;
+  /** Switched on by an admin. */
+  enabled: boolean;
+  /** Has working API credentials — set in the server environment, not here. */
+  configured: boolean;
+  is_default: boolean;
+}
+
+export function usePaymentGateways() {
+  return useQuery({
+    queryKey: ["admin", "billing", "gateways"] as const,
+    queryFn: async () => {
+      const { data } = await api.get<{ data: GatewayRow[]; meta: { default: string | null } }>(
+        `${ADMIN_API}/gateways`,
+      );
+      return data;
+    },
+  });
+}
+
+export function useUpdatePaymentGateways() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { enabled: string[]; default?: string | null }) => {
+      await ensureCsrf();
+      const { data } = await api.put<{ data: GatewayRow[]; message: string }>(
+        `${ADMIN_API}/gateways`,
+        input,
+      );
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminBillingKeys.all }),
+  });
+}

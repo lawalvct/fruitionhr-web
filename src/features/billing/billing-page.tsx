@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Check,
   CreditCard,
+  Download,
   Loader2,
   Receipt,
   Users,
@@ -51,6 +52,10 @@ export function BillingPage() {
   const renewal = subscription.data?.meta.renewal_quote ?? null;
   const gateways = subscription.data?.meta.gateways ?? plans.data?.meta.gateways ?? [];
   const suggested = subscription.data?.meta.suggested_plan ?? null;
+  const defaultGateway = subscription.data?.meta.default_gateway ?? null;
+  const [gateway, setGateway] = useState<string | null>(null);
+  // Fall back to whatever the platform preselected.
+  const chosenGateway = gateway ?? defaultGateway ?? gateways[0]?.slug ?? undefined;
 
   const choosePlan = async (plan: BillingPlan) => {
     setBusyPlanId(plan.id);
@@ -99,7 +104,7 @@ export function BillingPage() {
           employees={employees}
           renewalAmount={renewal?.amount ?? null}
           isPaying={startPayment.isPending}
-          onPay={() => pay()}
+          onPay={() => pay(undefined, chosenGateway)}
           onCancel={() => setCancelling(true)}
         />
       )}
@@ -138,6 +143,26 @@ export function BillingPage() {
                 isBusy={busyPlanId === plan.id || subscribe.isPending}
                 onChoose={() => choosePlan(plan)}
               />
+            ))}
+          </div>
+        )}
+
+        {gateways.length > 1 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <span className="text-sm font-medium text-slate-700">Pay with</span>
+            {gateways.map((method) => (
+              <button
+                key={method.slug}
+                type="button"
+                onClick={() => setGateway(method.slug)}
+                className={
+                  chosenGateway === method.slug
+                    ? "rounded-lg bg-fruition-600 px-3 py-1.5 text-sm font-semibold text-white"
+                    : "rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-fruition-300"
+                }
+              >
+                {method.label}
+              </button>
             ))}
           </div>
         )}
@@ -186,11 +211,28 @@ export function BillingPage() {
                         {payment.reference}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <PaymentPill status={payment.status} />
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        {formatDate(payment.paid_at ?? payment.created_at)} · {payment.gateway}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <PaymentPill status={payment.status} />
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {formatDate(payment.paid_at ?? payment.created_at)} · {payment.gateway}
+                        </p>
+                      </div>
+                      {payment.status === "successful" && (
+                        // A plain link, not fetch: the browser handles the file
+                        // save and the session cookie rides along.
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          render={
+                            <a
+                              href={`/api/v1/billing/payments/${encodeURIComponent(payment.reference)}/receipt`}
+                            />
+                          }
+                        >
+                          <Download className="size-3.5" /> Receipt
+                        </Button>
+                      )}
                     </div>
                   </li>
                 ))}

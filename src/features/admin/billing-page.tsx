@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { BillingPlan } from "@/features/billing/types";
 import { apiErrorMessage, isValidationError } from "@/lib/api";
 import { AdminMetricCard, AdminPagination, formatAdminDate, humanize, QueryErrorState } from "./admin-ui";
+import { PaymentGatewaysCard } from "./payment-gateways-card";
 import {
   useAdminPlans,
   useAdminSubscriptions,
@@ -183,8 +184,11 @@ export function AdminBillingPage() {
           </Card>
         )
       ) : (
-        <div className="grid gap-4 md:grid-cols-3">
-          {plans.isPending
+        <div className="space-y-6">
+          <PaymentGatewaysCard />
+
+          <div className="grid gap-4 md:grid-cols-3">
+            {plans.isPending
             ? Array.from({ length: 3 }).map((_, index) => (
                 <Skeleton key={index} className="h-56 w-full rounded-2xl" />
               ))
@@ -222,9 +226,10 @@ export function AdminBillingPage() {
                     <Button variant="outline" size="sm" onClick={() => setEditing(plan)}>
                       <Pencil className="size-3.5" /> Edit
                     </Button>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))}
+          </div>
         </div>
       )}
 
