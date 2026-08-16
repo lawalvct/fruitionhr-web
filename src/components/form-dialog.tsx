@@ -19,6 +19,8 @@ export function FormDialog({
   description,
   formId,
   isPending = false,
+  submitLabel = "Save",
+  pendingLabel = "Saving...",
   children,
 }: {
   open: boolean;
@@ -27,6 +29,8 @@ export function FormDialog({
   description?: string;
   formId: string;
   isPending?: boolean;
+  submitLabel?: string;
+  pendingLabel?: string;
   children: ReactNode;
 }) {
   return (
@@ -42,7 +46,7 @@ export function FormDialog({
             Cancel
           </Button>
           <Button type="submit" form={formId} disabled={isPending}>
-            {isPending ? "Saving..." : "Save"}
+            {isPending ? pendingLabel : submitLabel}
           </Button>
         </SheetFooter>
       </SheetContent>

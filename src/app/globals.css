@@ -2,6 +2,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Long-form content styling for blog posts (prose classes). */
+@plugin "@tailwindcss/typography";
+
 @custom-variant dark (&:is(.dark *));
 
 /* FruitionHR brand palette — see ../fruitionhr_brand_theme.md */
