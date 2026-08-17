@@ -13,13 +13,19 @@ export const adminSupportKeys = {
   detail: (id: number) => ["admin", "support", "ticket", id] as const,
 };
 
-export function useAdminTickets(status: string, search: string) {
+export function useAdminTickets(status: string, search: string, tenantId?: number) {
   return useQuery({
-    queryKey: adminSupportKeys.list(status, search),
+    queryKey: [...adminSupportKeys.list(status, search), tenantId ?? null],
     queryFn: async () => {
       const { data } = await api.get<{ data: SupportTicket[]; summary: TicketSummary }>(
         `${ADMIN_API}/tickets`,
-        { params: { status: status || undefined, search: search || undefined } },
+        {
+          params: {
+            status: status || undefined,
+            search: search || undefined,
+            tenant_id: tenantId,
+          },
+        },
       );
       return data;
     },

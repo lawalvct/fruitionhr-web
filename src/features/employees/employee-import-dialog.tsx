@@ -75,7 +75,7 @@ export function EmployeeImportDialog({ open, onOpenChange }: { open: boolean; on
         <div className="rounded-xl border border-fruition-200 bg-fruition-50/60 p-4">
           <div className="flex items-start gap-3">
             <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white text-fruition-700 shadow-sm"><FileSpreadsheet className="size-4" /></span>
-              <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-foreground">Start with the accepted format</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Includes 3 importable sample rows, tenant reference values, and dependency instructions. Replace or delete samples you do not want to import.</p></div>
+              <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-foreground">Start with the accepted format</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Includes 3 importable sample rows, company reference values, and dependency instructions. Replace or delete samples you do not want to import.</p></div>
           </div>
           <Button className="mt-3 w-full sm:w-auto" type="button" variant="outline" size="sm" disabled={downloadingTemplate} onClick={() => void downloadTemplate()}>
             <Download className="size-4" /> {downloadingTemplate ? "Downloading..." : "Download Excel template"}

@@ -109,7 +109,7 @@ export function AdminDashboardPage() {
           tone="green"
         />
         <AdminMetricCard
-          label="Tenant users"
+          label="Company users"
           value={metrics.tenant_users_total.toLocaleString("en-NG")}
           detail="People with access across every company"
           icon={Users}

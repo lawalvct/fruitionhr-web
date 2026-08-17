@@ -82,7 +82,7 @@ export function CareersPage() {
         <AdminMetricCard
           label="Hiring companies"
           value={summary?.hiring_companies ?? 0}
-          detail="Tenants with at least one vacancy"
+          detail="Companies with at least one vacancy"
           icon={Building2}
           tone="amber"
         />

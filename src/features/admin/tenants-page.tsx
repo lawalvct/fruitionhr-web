@@ -51,7 +51,7 @@ export function TenantsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Companies"
-        description="Review every FruitionHR workspace, follow onboarding, and manage company access without entering tenant data."
+        description="Review every FruitionHR workspace, follow onboarding, and manage company access without entering their data."
       />
 
       <Card className="border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">

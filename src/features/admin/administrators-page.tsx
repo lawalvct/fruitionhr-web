@@ -68,9 +68,10 @@ export function AdministratorsPage() {
       <section className="flex gap-3 rounded-xl border border-blue-200 bg-blue-50/70 px-4 py-3.5 text-sm text-blue-900">
         <ShieldCheck className="mt-0.5 size-4 shrink-0" />
         <div>
-          <p className="font-semibold">Full platform access</p>
+          <p className="font-semibold">Access follows the role</p>
           <p className="mt-1 text-xs leading-5 text-blue-800/75">
-            Every active platform administrator can manage all companies and other administrators. Tenant roles do not apply here.
+            Each administrator reaches only the sections their role allows. Owners can reach everything, including adding
+            administrators and deciding what they can access. Roles inside a company are separate and do not apply here.
           </p>
         </div>
       </section>

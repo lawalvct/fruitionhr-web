@@ -243,17 +243,63 @@ export function DistributionList({ points }: { points: DashboardSeriesPoint[] })
   );
 }
 
-export function Identity({ name, detail }: { name: string; detail?: ReactNode }) {
+export function Identity({
+  name,
+  detail,
+  tone = "light",
+  size = "sm",
+}: {
+  name: string;
+  detail?: ReactNode;
+  /**
+   * "dark" for placement on a dark surface. The default ink is slate, built for
+   * white cards, and it disappears entirely on the deep green banner.
+   */
+  tone?: "light" | "dark";
+  size?: "sm" | "lg";
+}) {
+  const onDark = tone === "dark";
+  const large = size === "lg";
+
   return (
-    <div className="flex min-w-0 items-center gap-3">
-      <Avatar className="size-9 shrink-0 ring-1 ring-slate-200">
-        <AvatarFallback className="bg-fruition-50 text-xs font-bold text-fruition-800">
+    <div className={cn("flex min-w-0 items-center", large ? "gap-4" : "gap-3")}>
+      <Avatar
+        className={cn(
+          "shrink-0 ring-1",
+          large ? "size-12" : "size-9",
+          onDark ? "ring-white/30" : "ring-slate-200",
+        )}
+      >
+        <AvatarFallback
+          className={cn(
+            "font-bold",
+            large ? "text-sm" : "text-xs",
+            onDark ? "bg-white/15 text-white" : "bg-fruition-50 text-fruition-800",
+          )}
+        >
           {initials(name)}
         </AvatarFallback>
       </Avatar>
       <span className="min-w-0">
-        <span className="block truncate text-sm font-semibold text-slate-900">{name}</span>
-        {detail && <span className="mt-0.5 block truncate text-xs text-slate-500">{detail}</span>}
+        <span
+          className={cn(
+            "block truncate font-semibold",
+            large ? "text-lg tracking-tight" : "text-sm",
+            onDark ? "text-white" : "text-slate-900",
+          )}
+        >
+          {name}
+        </span>
+        {detail && (
+          <span
+            className={cn(
+              "mt-0.5 block truncate text-xs",
+              onDark ? "text-white/75" : "text-slate-500",
+            )}
+          >
+            {detail}
+          </span>
+        )}
       </span>
     </div>
   );

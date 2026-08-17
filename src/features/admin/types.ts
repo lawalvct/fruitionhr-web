@@ -29,7 +29,35 @@ export interface AdminTenantSummary {
   updated_at: string;
 }
 
-export type AdminTenantDetail = AdminTenantSummary;
+/**
+ * The company page adds a commercial snapshot to the base record.
+ *
+ * `revenue` is absent unless the viewer holds the revenue ability — the API
+ * decides, not the UI, so this is optional by design rather than by accident.
+ */
+export interface AdminTenantDetail extends AdminTenantSummary {
+  subscription: {
+    status: string;
+    plan: string | null;
+    billing_interval: string | null;
+    employee_count: number;
+    on_trial: boolean;
+    trial_ends_at: string | null;
+    current_period_end: string | null;
+  } | null;
+  support: {
+    /** Tickets still needing someone on our side. */
+    unresolved: number;
+    total: number;
+  };
+  revenue?: {
+    /** Contracted per billing period, in kobo. */
+    amount: number;
+    /** Settled money from this company, ever, in kobo. */
+    collected: number;
+    last_payment_at: string | null;
+  };
+}
 
 export interface PlatformRoleSummary {
   id: number;

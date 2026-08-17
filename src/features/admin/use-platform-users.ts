@@ -27,6 +27,7 @@ export function usePlatformUsers(query: PlatformUserQuery) {
           type: query.type || undefined,
           // Omit entirely when unset so the API does not read it as "false".
           verified: query.verified === "" ? undefined : query.verified,
+          tenant_id: query.tenant_id,
         },
       });
       return data;

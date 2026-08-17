@@ -29,4 +29,6 @@ export interface PlatformUserQuery {
   type: "administrator" | "tenant" | "";
   /** "" means no filter at all — not "unverified". */
   verified: "" | "1" | "0";
+  /** Set when arriving from a company page, to show only that company's users. */
+  tenant_id?: number;
 }

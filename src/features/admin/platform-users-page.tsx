@@ -1,6 +1,7 @@
 "use client";
 
-import { BadgeCheck, KeyRound, MailWarning, Search, ShieldCheck, UserCheck, Users } from "lucide-react";
+import { BadgeCheck, KeyRound, MailWarning, Search, ShieldCheck, UserCheck, Users, X } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -39,6 +40,15 @@ export function PlatformUsersPage() {
   const [verifying, setVerifying] = useState<PlatformUser | null>(null);
   const [resetting, setResetting] = useState<PlatformUser | null>(null);
 
+  // Set when arriving from a company page ("View their users"). Kept in state
+  // rather than read on every render so it can be cleared without navigating.
+  const searchParams = useSearchParams();
+  const [tenantId, setTenantId] = useState<number | undefined>(() => {
+    const raw = Number(searchParams.get("tenant_id"));
+    return Number.isInteger(raw) && raw > 0 ? raw : undefined;
+  });
+  const companyName = searchParams.get("company");
+
   const verifyEmail = useVerifyUserEmail();
   const resetPassword = useResetUserPassword();
 
@@ -50,7 +60,11 @@ export function PlatformUsersPage() {
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
-  const users = usePlatformUsers({ page, search, status, type, verified });
+  const users = usePlatformUsers({ page, search, status, type, verified, tenant_id: tenantId });
+
+  const companyFilter = tenantId !== undefined ? (
+    <CompanyFilterChip name={companyName} onClear={() => setTenantId(undefined)} />
+  ) : null;
   const rows = users.data?.data ?? [];
   const summary = users.data?.summary;
 
@@ -164,6 +178,7 @@ export function PlatformUsersPage() {
           <option value="1">Verified</option>
           <option value="0">Not verified</option>
         </select>
+        {companyFilter}
       </div>
 
       {users.isError ? (
@@ -273,5 +288,27 @@ export function PlatformUsersPage() {
         onConfirm={confirmReset}
       />
     </div>
+  );
+}
+
+/**
+ * Says why the list is short, and gets out of the way.
+ *
+ * Arriving here from a company page filters the list; without this the missing
+ * rows just look like missing data.
+ */
+function CompanyFilterChip({ name, onClear }: { name: string | null; onClear: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-fruition-50 py-1 pr-1 pl-3 text-xs font-medium text-fruition-900 ring-1 ring-fruition-200">
+      {name ? `Only ${name}` : "One company only"}
+      <button
+        type="button"
+        onClick={onClear}
+        aria-label="Show all companies"
+        className="grid size-5 place-items-center rounded-full text-fruition-700 hover:bg-fruition-100"
+      >
+        <X className="size-3" />
+      </button>
+    </span>
   );
 }

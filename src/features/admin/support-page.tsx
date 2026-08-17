@@ -1,6 +1,7 @@
 "use client";
 
-import { Clock, Inbox, Loader2, Search, UserCheck, UserPlus } from "lucide-react";
+import { Clock, Inbox, Loader2, Search, UserCheck, UserPlus, X } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -42,12 +43,24 @@ export function AdminSupportPage() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
+  // Set when arriving from a company page ("View their tickets").
+  const searchParams = useSearchParams();
+  const [tenantId, setTenantId] = useState<number | undefined>(() => {
+    const raw = Number(searchParams.get("tenant_id"));
+    return Number.isInteger(raw) && raw > 0 ? raw : undefined;
+  });
+  const companyName = searchParams.get("company");
+
   useEffect(() => {
     const timer = window.setTimeout(() => setSearch(searchInput.trim()), 300);
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
-  const tickets = useAdminTickets(status, search);
+  const tickets = useAdminTickets(status, search, tenantId);
+
+  const companyFilter = tenantId !== undefined ? (
+    <CompanyFilterChip name={companyName} onClear={() => setTenantId(undefined)} />
+  ) : null;
   const rows = tickets.data?.data ?? [];
   const summary = tickets.data?.summary;
 
@@ -111,6 +124,7 @@ export function AdminSupportPage() {
             </option>
           ))}
         </select>
+        {companyFilter}
       </div>
 
       {tickets.isError ? (
@@ -309,5 +323,27 @@ function AgentTicketDialog({ id, onClose }: { id: number | null; onClose: () => 
         </div>
       )}
     </FormDialog>
+  );
+}
+
+/**
+ * Says why the list is short, and gets out of the way.
+ *
+ * Arriving here from a company page filters the list; without this the missing
+ * rows just look like missing data.
+ */
+function CompanyFilterChip({ name, onClear }: { name: string | null; onClear: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-fruition-50 py-1 pr-1 pl-3 text-xs font-medium text-fruition-900 ring-1 ring-fruition-200">
+      {name ? `Only ${name}` : "One company only"}
+      <button
+        type="button"
+        onClick={onClear}
+        aria-label="Show all companies"
+        className="grid size-5 place-items-center rounded-full text-fruition-700 hover:bg-fruition-100"
+      >
+        <X className="size-3" />
+      </button>
+    </span>
   );
 }

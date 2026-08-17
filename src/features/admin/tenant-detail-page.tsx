@@ -4,21 +4,26 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Building2,
   CalendarDays,
   CheckCircle2,
+  CreditCard,
+  LifeBuoy,
+  Lock,
   Mail,
   Pencil,
   Phone,
   ShieldAlert,
   Users,
+  Wallet,
+  type LucideIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { MoneyText } from "@/components/money-text";
 import { FormDialog } from "@/components/form-dialog";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -28,6 +33,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { mapLaravelErrorsToForm } from "@/lib/forms";
 import { apiErrorMessage } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import {
   AdminStatusBadge,
   formatAdminDate,
@@ -192,8 +198,16 @@ export function TenantDetailPage({ tenantId }: { tenantId: string }) {
 
       <section className="overflow-hidden rounded-2xl border border-fruition-900/20 bg-linear-135 from-fruition-950 to-fruition-800 p-5 text-white shadow-[0_10px_28px_rgba(2,44,34,0.14)] sm:p-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <Identity name={company.name} detail={`${company.slug} · Company #${company.id}`} />
-          <div className="flex flex-wrap gap-2">
+          <Identity
+            tone="dark"
+            size="lg"
+            name={company.name}
+            // A plain string, not markup: Identity truncates its detail line,
+            // and a flex row inside a truncating span cuts mid-element instead
+            // of ellipsising on a narrow screen.
+            detail={`/${company.slug} · Company #${company.id} · Customer since ${formatAdminDate(company.created_at)}`}
+          />
+          <div className="flex flex-wrap items-center gap-2">
             <AdminStatusBadge status={company.status} />
             <AdminStatusBadge status={company.onboarding_status} />
           </div>
@@ -205,10 +219,12 @@ export function TenantDetailPage({ tenantId }: { tenantId: string }) {
           <ShieldAlert className="mt-0.5 size-4 shrink-0" />
           <div>
             <p className="font-semibold">Company access is suspended</p>
-            <p className="mt-1 text-xs leading-5 text-amber-800/80">Tenant users cannot enter the workspace until a platform administrator activates it.</p>
+            <p className="mt-1 text-xs leading-5 text-amber-800/80">Company users cannot enter the workspace until a platform administrator activates it.</p>
           </div>
         </section>
       )}
+
+      <CustomerSnapshot company={company} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border-slate-200/80">
@@ -225,26 +241,22 @@ export function TenantDetailPage({ tenantId }: { tenantId: string }) {
 
         <Card className="border-slate-200/80">
           <CardHeader className="border-b border-slate-100">
-            <CardTitle className="text-base">Workspace progress</CardTitle>
+            <CardTitle className="text-base">Getting started</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5 pt-5">
+            <OnboardingProgress company={company} />
             <div className="grid gap-3 sm:grid-cols-2">
-              <DetailItem icon={Users} label="Tenant users" value={company.users_count.toLocaleString("en-NG")} />
-              <DetailItem icon={Building2} label="Onboarding step" value={`Step ${company.onboarding_step ?? 1}`} />
+              <DetailItem icon={CalendarDays} label="Trial ends" value={formatAdminDate(company.trial_ends_at)} />
+              <DetailItem icon={Users} label="Company users" value={company.users_count.toLocaleString("en-NG")} />
             </div>
-            <div>
-              <div className="flex items-center justify-between gap-3 text-xs">
-                <span className="font-medium text-slate-600">Onboarding completion</span>
-                <AdminStatusBadge status={company.onboarding_status} />
-              </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className="h-full rounded-full bg-linear-to-r from-fruition-700 to-emerald-400"
-                  style={{ width: company.onboarding_status === "completed" ? "100%" : `${Math.min((company.onboarding_step ?? 1) * 20, 90)}%` }}
-                />
-              </div>
+            <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+              <Button variant="outline" size="sm" render={<Link href={`/users?tenant_id=${company.id}&company=${encodeURIComponent(company.name)}`} />}>
+                <Users className="size-3.5" /> View their users
+              </Button>
+              <Button variant="outline" size="sm" render={<Link href={`/support?tenant_id=${company.id}&company=${encodeURIComponent(company.name)}`} />}>
+                <LifeBuoy className="size-3.5" /> View their tickets
+              </Button>
             </div>
-            <DetailItem icon={CalendarDays} label="Trial ends" value={formatAdminDate(company.trial_ends_at)} />
           </CardContent>
         </Card>
       </div>
@@ -254,7 +266,7 @@ export function TenantDetailPage({ tenantId }: { tenantId: string }) {
         open={suspendOpen}
         onOpenChange={setSuspendOpen}
         title="Suspend company access"
-        description="All tenant users will be blocked from their workspace until the company is activated again."
+        description="All company users will be blocked from their workspace until the company is activated again."
         subject={company.name}
         actionLabel="Suspend"
         isPending={suspendTenant.isPending}
@@ -272,7 +284,7 @@ export function TenantDetailPage({ tenantId }: { tenantId: string }) {
         open={activateOpen}
         onOpenChange={setActivateOpen}
         title="Activate company access?"
-        description={`Tenant users at ${company.name} will be able to sign in and use their workspace again.`}
+        description={`Company users at ${company.name} will be able to sign in and use their workspace again.`}
         confirmLabel="Activate"
         isPending={activateTenant.isPending}
         onConfirm={async () => {
@@ -285,6 +297,168 @@ export function TenantDetailPage({ tenantId }: { tenantId: string }) {
           }
         }}
       />
+    </div>
+  );
+}
+
+/**
+ * How this company is doing as a customer: what they are on, whether anything
+ * needs chasing, and — for those allowed to see it — what they are worth.
+ *
+ * The revenue tile is absent whenever the API omits it, which happens when the
+ * viewer has not been given the revenue ability. Nothing is decided here.
+ */
+function CustomerSnapshot({ company }: { company: AdminTenantDetail }) {
+  const subscription = company.subscription;
+  const unresolved = company.support.unresolved;
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <SnapshotTile
+        icon={CreditCard}
+        label="Subscription"
+        value={subscription?.plan ?? "No plan"}
+        detail={
+          subscription === null
+            ? "Has never subscribed"
+            : subscription.on_trial
+              ? `On trial until ${formatAdminDate(subscription.trial_ends_at)}`
+              : `${SUBSCRIPTION_LABELS[subscription.status] ?? subscription.status}${
+                  subscription.current_period_end
+                    ? ` · renews ${formatAdminDate(subscription.current_period_end)}`
+                    : ""
+                }`
+        }
+        tone={subscriptionTone(subscription?.status)}
+      />
+
+      <SnapshotTile
+        icon={Users}
+        label="Billable employees"
+        value={(subscription?.employee_count ?? 0).toLocaleString("en-NG")}
+        detail={`${company.users_count.toLocaleString("en-NG")} sign-in ${company.users_count === 1 ? "account" : "accounts"}`}
+        tone="slate"
+      />
+
+      <SnapshotTile
+        icon={LifeBuoy}
+        label="Support"
+        value={unresolved.toLocaleString("en-NG")}
+        detail={
+          company.support.total === 0
+            ? "Has never raised a ticket"
+            : `${unresolved === 0 ? "Nothing" : unresolved === 1 ? "1 ticket" : `${unresolved} tickets`} open of ${company.support.total} ever`
+        }
+        tone={unresolved > 0 ? "amber" : "slate"}
+      />
+
+      {company.revenue ? (
+        <SnapshotTile
+          icon={Wallet}
+          label="Collected"
+          value={<MoneyText kobo={company.revenue.collected} />}
+          detail={
+            company.revenue.last_payment_at
+              ? `Last paid ${formatAdminDate(company.revenue.last_payment_at)}`
+              : "No payment has settled yet"
+          }
+          tone="green"
+        />
+      ) : (
+        <SnapshotTile
+          icon={Lock}
+          label="Collected"
+          value="Hidden"
+          detail="Needs the Revenue access level"
+          tone="slate"
+        />
+      )}
+    </div>
+  );
+}
+
+const SUBSCRIPTION_LABELS: Record<string, string> = {
+  active: "Active",
+  trialing: "On trial",
+  past_due: "Payment overdue",
+  cancelled: "Cancelled",
+  expired: "Expired",
+};
+
+const snapshotTones = {
+  green: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+  amber: "bg-amber-50 text-amber-700 ring-amber-100",
+  red: "bg-red-50 text-red-700 ring-red-100",
+  slate: "bg-slate-100 text-slate-500 ring-slate-200",
+} as const;
+
+/** Colour means state here, never identity — so it stays semantic. */
+function subscriptionTone(status?: string): keyof typeof snapshotTones {
+  if (status === "active") return "green";
+  if (status === "trialing") return "amber";
+  if (status === "past_due" || status === "expired") return "red";
+  return "slate";
+}
+
+function SnapshotTile({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: ReactNode;
+  detail: string;
+  tone: keyof typeof snapshotTones;
+}) {
+  return (
+    <Card className="border-slate-200/80">
+      <CardContent className="flex items-start justify-between gap-3 p-5">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">{label}</p>
+          <p className="mt-2 truncate text-xl font-bold tracking-tight text-slate-950">{value}</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">{detail}</p>
+        </div>
+        <span className={cn("grid size-9 shrink-0 place-items-center rounded-xl ring-1", snapshotTones[tone])}>
+          <Icon className="size-4" />
+        </span>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Onboarding has three steps — see features/onboarding/onboarding-page. */
+const ONBOARDING_STEPS = 3;
+
+function OnboardingProgress({ company }: { company: AdminTenantDetail }) {
+  const done = company.onboarding_status === "completed";
+  const skipped = company.onboarding_status === "skipped";
+  const step = Math.min(Math.max(company.onboarding_step ?? 1, 1), ONBOARDING_STEPS);
+  // Real fractions of the real step count. The previous bar multiplied the step
+  // by 20 and capped at 90, so a company on the last of three steps read as 60%.
+  const percent = done ? 100 : skipped ? 0 : Math.round((step / ONBOARDING_STEPS) * 100);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3 text-xs">
+        <span className="font-medium text-slate-600">
+          {done ? "Setup complete" : skipped ? "Setup skipped" : `Step ${step} of ${ONBOARDING_STEPS}`}
+        </span>
+        <AdminStatusBadge status={company.onboarding_status} />
+      </div>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className="h-full rounded-full bg-linear-to-r from-fruition-700 to-emerald-400 transition-[width] duration-500"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      {skipped && (
+        <p className="mt-2 text-xs leading-5 text-slate-500">
+          They chose to skip setup and configure things as they go.
+        </p>
+      )}
     </div>
   );
 }

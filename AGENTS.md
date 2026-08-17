@@ -46,4 +46,5 @@ Inside a surface, always link with host-relative paths (`/dashboard`, `/login`) 
 - Protected layouts wrap in `<RequireAuth>` (`superAdminOnly` for admin). Permission-gate UI with `<Can permission="payroll.approve">` — UX only, the API enforces.
 - Types in `src/types/` are hand-written until OpenAPI generation lands; API JSON is snake_case — keep types matching, no renaming.
 - Money from the API is integer kobo — format for display only, never do arithmetic in floats.
+- **Never write "tenant" in user-facing copy — say "company".** "Tenant" is internal architecture vocabulary and means nothing to the people using this product. It stays in code (`tenant_id`, `TenantScope`, query keys, API field names and ability keys, which are contract); it never appears in a label, heading, description, toast, empty state or email.
 
