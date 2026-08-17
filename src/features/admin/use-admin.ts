@@ -7,6 +7,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
+import { ME_QUERY_KEY } from "@/features/auth/use-auth";
 import { api, ensureCsrf } from "@/lib/api";
 import type {
   AdminDashboard,
@@ -17,7 +18,10 @@ import type {
   AdministratorUpdateInput,
   PaginatedResponse,
   PlatformActivity,
+  PlatformAbilityOption,
   PlatformAdministrator,
+  PlatformRole,
+  PlatformRoleInput,
   TenantListQuery,
   TenantUpdateInput,
 } from "./types";
@@ -38,7 +42,77 @@ export const adminKeys = {
   administratorList: (query: AdministratorListQuery) =>
     ["admin", "administrators", "list", query] as const,
   activity: (page: number) => ["admin", "activity", page] as const,
+  platformRoles: ["admin", "platform-roles"] as const,
 };
+
+/**
+ * Roles, plus the catalogue of sections a role can be given.
+ *
+ * Fetched together because the ability picker needs both, and the catalogue is
+ * the API's answer to "what can a role be given?" — never a list duplicated in
+ * the frontend that could drift out of step.
+ */
+export function usePlatformRoles(enabled = true) {
+  return useQuery({
+    queryKey: adminKeys.platformRoles,
+    enabled,
+    queryFn: async () => {
+      const { data } = await api.get<{ data: PlatformRole[]; meta: { abilities: PlatformAbilityOption[] } }>(
+        `${ADMIN_API}/platform-roles`,
+      );
+      return { roles: data.data, abilities: data.meta.abilities };
+    },
+  });
+}
+
+export function useCreatePlatformRole() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: PlatformRoleInput) => {
+      await ensureCsrf();
+      const { data } = await api.post<ResourceResponse<PlatformRole>>(`${ADMIN_API}/platform-roles`, input);
+      return data.data;
+    },
+    onSuccess: () => invalidateRoles(queryClient),
+  });
+}
+
+export function useUpdatePlatformRole(id: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: PlatformRoleInput) => {
+      await ensureCsrf();
+      const { data } = await api.put<ResourceResponse<PlatformRole>>(`${ADMIN_API}/platform-roles/${id}`, input);
+      return data.data;
+    },
+    onSuccess: () => invalidateRoles(queryClient),
+  });
+}
+
+export function useDeletePlatformRole() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await ensureCsrf();
+      await api.delete(`${ADMIN_API}/platform-roles/${id}`);
+    },
+    onSuccess: () => invalidateRoles(queryClient),
+  });
+}
+
+/**
+ * Editing a role changes what its holders can reach, including possibly the
+ * person doing the editing, so the profile is refetched alongside the lists.
+ */
+function invalidateRoles(queryClient: ReturnType<typeof useQueryClient>): void {
+  queryClient.invalidateQueries({ queryKey: adminKeys.platformRoles });
+  queryClient.invalidateQueries({ queryKey: adminKeys.administrators });
+  queryClient.invalidateQueries({ queryKey: ["admin", "activity"] });
+  queryClient.invalidateQueries({ queryKey: ME_QUERY_KEY });
+}
 
 export function useAdminDashboard() {
   return useQuery({

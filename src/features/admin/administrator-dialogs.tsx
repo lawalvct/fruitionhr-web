@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
-import { useForm, type FieldErrors, type Path, type UseFormRegister } from "react-hook-form";
+import { useForm, useWatch, type FieldErrors, type Path, type UseFormRegister } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { mapLaravelErrorsToForm } from "@/lib/forms";
 import type { PlatformAdministrator } from "./types";
-import { useCreateAdministrator, useUpdateAdministrator } from "./use-admin";
+import { RoleSelect } from "./role-select";
+import { useCreateAdministrator, usePlatformRoles, useUpdateAdministrator } from "./use-admin";
 
 const baseFields = {
   name: z.string().trim().min(2, "Enter the administrator's name").max(255),
@@ -23,6 +24,7 @@ const baseFields = {
 const createSchema = z
   .object({
     ...baseFields,
+    platform_role_id: z.number().int().positive("Choose what this administrator can access"),
     password: z.string().min(8, "Use at least 8 characters"),
     password_confirmation: z.string().min(1, "Confirm the password"),
   })
@@ -31,13 +33,16 @@ const createSchema = z
     message: "Passwords do not match",
   });
 
-const editSchema = z.object(baseFields);
+const editSchema = z.object({
+  ...baseFields,
+  platform_role_id: z.number().int().positive("Choose what this administrator can access"),
+});
 
 type CreateValues = z.infer<typeof createSchema>;
 type EditValues = z.infer<typeof editSchema>;
 
-const createFields = ["name", "email", "phone", "timezone", "password", "password_confirmation"] as const;
-const editFields = ["name", "email", "phone", "timezone"] as const;
+const createFields = ["name", "email", "phone", "timezone", "platform_role_id", "password", "password_confirmation"] as const;
+const editFields = ["name", "email", "phone", "timezone", "platform_role_id"] as const;
 
 const TIMEZONES: string[] =
   typeof Intl !== "undefined" && "supportedValuesOf" in Intl
@@ -114,10 +119,13 @@ export function CreateAdministratorDialog({
       email: "",
       phone: "",
       timezone: "Africa/Lagos",
+      platform_role_id: 0,
       password: "",
       password_confirmation: "",
     },
   });
+  const roles = usePlatformRoles(open);
+  const roleId = useWatch({ control: form.control, name: "platform_role_id" });
 
   useEffect(() => {
     if (!open) form.reset();
@@ -130,6 +138,7 @@ export function CreateAdministratorDialog({
         email: values.email.trim(),
         phone: values.phone?.trim() || null,
         timezone: values.timezone || null,
+        platform_role_id: values.platform_role_id,
         password: values.password,
         password_confirmation: values.password_confirmation,
       });
@@ -145,7 +154,7 @@ export function CreateAdministratorDialog({
       open={open}
       onOpenChange={onOpenChange}
       title="Add platform administrator"
-      description="This person gets full access to company and administrator management as soon as they sign in."
+      description="Choose what they can reach. They can sign in as soon as you save."
       formId="create-platform-administrator"
       isPending={createAdministrator.isPending}
       submitLabel="Create administrator"
@@ -156,12 +165,19 @@ export function CreateAdministratorDialog({
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{form.formState.errors.root.message}</p>
         )}
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
-          Platform administrators can manage every company. Only add trusted FruitionHR team members.
+          Administrators work across every company on the platform. Give each person the narrowest access that lets them do their job.
         </div>
         <Field label="Full name" name="name" autoComplete="name" register={form.register} errors={form.formState.errors} />
         <Field label="Email" name="email" type="email" autoComplete="email" register={form.register} errors={form.formState.errors} />
         <Field label="Phone" name="phone" type="tel" autoComplete="tel" register={form.register} errors={form.formState.errors} />
         <TimezoneField register={form.register} errors={form.formState.errors} />
+        <RoleSelect
+          roles={roles.data?.roles ?? []}
+          isPending={roles.isPending}
+          value={roleId}
+          onChange={(id) => form.setValue("platform_role_id", id, { shouldValidate: true })}
+          error={form.formState.errors.platform_role_id?.message}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Temporary password" name="password" type="password" autoComplete="new-password" register={form.register} errors={form.formState.errors} />
           <Field label="Confirm password" name="password_confirmation" type="password" autoComplete="new-password" register={form.register} errors={form.formState.errors} />
@@ -204,8 +220,11 @@ function EditAdministratorDialogContent({
       email: administrator.email,
       phone: administrator.phone ?? "",
       timezone: administrator.timezone ?? "",
+      platform_role_id: administrator.platform_role?.id ?? 0,
     },
   });
+  const roles = usePlatformRoles();
+  const roleId = useWatch({ control: form.control, name: "platform_role_id" });
 
   const submit = form.handleSubmit(async (values) => {
     try {
@@ -214,6 +233,7 @@ function EditAdministratorDialogContent({
         email: values.email.trim(),
         phone: values.phone?.trim() || null,
         timezone: values.timezone || null,
+        platform_role_id: values.platform_role_id,
       });
       toast.success(`${values.name.trim()}'s details were updated.`);
       onOpenChange(false);
@@ -227,7 +247,7 @@ function EditAdministratorDialogContent({
       open
       onOpenChange={onOpenChange}
       title={`Edit ${administrator.name}`}
-      description="Update this administrator's contact and regional information."
+      description="Update their details, or change what they can reach."
       formId="edit-platform-administrator"
       isPending={updateAdministrator.isPending}
       submitLabel="Save changes"
@@ -240,6 +260,13 @@ function EditAdministratorDialogContent({
         <Field label="Email" name="email" type="email" autoComplete="email" register={form.register} errors={form.formState.errors} />
         <Field label="Phone" name="phone" type="tel" autoComplete="tel" register={form.register} errors={form.formState.errors} />
         <TimezoneField register={form.register} errors={form.formState.errors} />
+        <RoleSelect
+          roles={roles.data?.roles ?? []}
+          isPending={roles.isPending}
+          value={roleId}
+          onChange={(id) => form.setValue("platform_role_id", id, { shouldValidate: true })}
+          error={form.formState.errors.platform_role_id?.message}
+        />
       </form>
     </FormDialog>
   );

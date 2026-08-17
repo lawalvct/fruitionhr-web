@@ -5,12 +5,17 @@ import axios from "axios";
 
 import { api, ensureCsrf } from "@/lib/api";
 import type { LoginInput, Me, RegisterInput } from "@/types/auth";
+import { adminHomeDestination } from "@/features/admin/admin-access";
 import { tenantHomeDestination } from "./access-destinations";
 
 export const ME_QUERY_KEY = ["me"] as const;
 
 export function authDestination(me: Me): string {
   if (!me.is_email_verified) return "/verify-email";
+
+  // Platform staff land in the admin console, on the first section their role
+  // can reach — a blog editor has no Overview to be sent to.
+  if (me.is_super_admin) return adminHomeDestination(me);
 
   const onboarding = me.tenant?.onboarding_status;
   if (me.roles?.includes("owner") && onboarding !== "completed" && onboarding !== "skipped") {

@@ -21,6 +21,7 @@ import {
   ReasonDialog,
 } from "./admin-ui";
 import { CreateAdministratorDialog, EditAdministratorDialog } from "./administrator-dialogs";
+import { PlatformRolesCard } from "./platform-roles-card";
 import type { PlatformAdministrator } from "./types";
 import { useActivateAdministrator, useAdministrators, useDisableAdministrator } from "./use-admin";
 
@@ -127,6 +128,7 @@ export function AdministratorsPage() {
                   <thead className="bg-slate-50/80 text-left text-[11px] tracking-wide text-slate-500 uppercase">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Administrator</th>
+                      <th className="px-4 py-3 font-semibold">Access</th>
                       <th className="px-4 py-3 font-semibold">Account</th>
                       <th className="px-4 py-3 font-semibold">Email verification</th>
                       <th className="px-4 py-3 font-semibold">Timezone</th>
@@ -138,7 +140,7 @@ export function AdministratorsPage() {
                     {administrators.isLoading
                       ? Array.from({ length: 5 }).map((_, index) => (
                           <tr key={index}>
-                            {Array.from({ length: 6 }).map((__, cell) => <td key={cell} className="px-4 py-4"><Skeleton className="h-5 max-w-36" /></td>)}
+                            {Array.from({ length: 7 }).map((__, cell) => <td key={cell} className="px-4 py-4"><Skeleton className="h-5 max-w-36" /></td>)}
                           </tr>
                         ))
                       : rows.map((administrator) => {
@@ -151,6 +153,7 @@ export function AdministratorsPage() {
                                   detail={<>{administrator.email}{isCurrent ? " · You" : ""}</>}
                                 />
                               </td>
+                              <td className="px-4 py-3.5"><RoleBadge administrator={administrator} /></td>
                               <td className="px-4 py-3.5"><AdminStatusBadge status={administrator.status} /></td>
                               <td className="px-4 py-3.5">
                                 <AdminStatusBadge status={administrator.is_email_verified ? "verified" : "unverified"} />
@@ -190,6 +193,7 @@ export function AdministratorsPage() {
                         <div key={administrator.id} className="p-4">
                           <Identity name={administrator.name} detail={<>{administrator.email}{isCurrent ? " · You" : ""}</>} />
                           <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <RoleBadge administrator={administrator} />
                             <AdminStatusBadge status={administrator.status} />
                             <AdminStatusBadge status={administrator.is_email_verified ? "verified" : "unverified"} />
                           </div>
@@ -229,6 +233,8 @@ export function AdministratorsPage() {
         </CardContent>
       </Card>
 
+      <PlatformRolesCard />
+
       <CreateAdministratorDialog open={createOpen} onOpenChange={setCreateOpen} />
       <EditAdministratorDialog administrator={editing} onOpenChange={(open) => !open && setEditing(null)} />
       <ReasonDialog
@@ -254,7 +260,7 @@ export function AdministratorsPage() {
         open={activating !== null}
         onOpenChange={(open) => !open && setActivating(null)}
         title="Activate administrator?"
-        description={activating ? `${activating.name} will regain full platform access.` : ""}
+        description={activating ? `${activating.name} will be able to sign in again, with whatever their role allows.` : ""}
         confirmLabel="Activate"
         isPending={activateAdministrator.isPending}
         onConfirm={async () => {
@@ -269,5 +275,35 @@ export function AdministratorsPage() {
         }}
       />
     </div>
+  );
+}
+
+/**
+ * What this administrator can reach, at a glance.
+ *
+ * Owners are called out because they are the only ones who can hand out access
+ * — the distinction that matters most when scanning this list.
+ */
+function RoleBadge({ administrator }: { administrator: PlatformAdministrator }) {
+  const role = administrator.platform_role;
+
+  if (!role) {
+    return (
+      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+        No access
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={
+        role.is_owner
+          ? "rounded-full bg-fruition-700 px-2 py-0.5 text-[11px] font-semibold text-white"
+          : "rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700"
+      }
+    >
+      {role.name}
+    </span>
   );
 }

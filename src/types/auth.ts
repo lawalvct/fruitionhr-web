@@ -1,5 +1,17 @@
 // Hand-written until the OpenAPI-generated client lands (see architecture plan §2).
 
+/** Sections of the admin console. Mirrors App\Support\Authorization\PlatformAbilities. */
+export type PlatformAbility =
+  | "dashboard"
+  | "tenants"
+  | "users"
+  | "support"
+  | "billing"
+  | "careers"
+  | "blog"
+  | "activity"
+  | "administrators";
+
 export interface MeTenant {
   id: number;
   name: string;
@@ -31,6 +43,10 @@ export interface Me {
   employee?: MeEmployee;
   roles?: string[];
   permissions?: string[];
+  /** Platform staff only: the name of their role, e.g. "Support agent". */
+  platform_role?: string | null;
+  /** Platform staff only: the admin sections they can reach. */
+  platform_abilities?: PlatformAbility[];
 }
 
 export interface LoginInput {
