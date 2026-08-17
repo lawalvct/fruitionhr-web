@@ -7,6 +7,7 @@ export type PlatformAbility =
   | "users"
   | "support"
   | "billing"
+  | "revenue"
   | "careers"
   | "blog"
   | "activity"

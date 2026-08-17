@@ -11,6 +11,8 @@ export interface BlogPost {
   status: BlogPostStatus;
   is_published: boolean;
   published_at: string | null;
+  /** Reads of the public article page. */
+  views: number;
   seo_title: string | null;
   seo_description: string | null;
   author?: { id: number; name: string; email: string } | null;

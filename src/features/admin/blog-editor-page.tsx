@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiErrorMessage, isValidationError } from "@/lib/api";
+import { publicBlogUrl } from "@/lib/site";
 import { formatAdminDate, QueryErrorState } from "./admin-ui";
 import type { BlogPostInput } from "./blog-types";
 import { CoverImageField } from "./cover-image-field";
@@ -160,7 +161,7 @@ export function BlogEditorPage({ postId }: { postId: number | null }) {
                 size="sm"
                 render={
                   <a
-                    href={`/blog/${existing.data.slug}`}
+                    href={publicBlogUrl(existing.data.slug)}
                     target="_blank"
                     rel="noopener noreferrer"
                   />

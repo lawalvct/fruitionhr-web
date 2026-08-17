@@ -181,16 +181,24 @@ export function MiniBarChart({ points }: { points: DashboardSeriesPoint[] }) {
       {points.map((point, index) => {
         const height = Math.max((point.count / maximum) * 100, point.count ? 8 : 2);
         return (
-          <div key={`${point.period ?? point.label}-${index}`} className="group flex min-w-0 flex-1 flex-col items-center gap-2">
+          <div key={`${point.period ?? point.label}-${index}`} className="group flex h-full min-w-0 flex-1 flex-col items-center gap-2">
             <span className="text-[10px] font-semibold text-slate-500 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
               {point.count}
             </span>
-            <span
-              tabIndex={0}
-              aria-label={`${point.label}: ${point.count} companies`}
-              className="w-full max-w-12 rounded-t-lg bg-linear-to-t from-fruition-800 to-emerald-400 outline-none transition hover:from-fruition-700 focus-visible:ring-2 focus-visible:ring-fruition-400"
-              style={{ height: `${height}%` }}
-            />
+            {/*
+              The bar's percentage height needs a parent of definite height to
+              resolve against. Without this flex-1 track the column is
+              auto-height, the percentage never resolves, and every bar
+              collapses to zero — the chart renders as bare axis labels.
+            */}
+            <span className="flex w-full flex-1 items-end justify-center">
+              <span
+                tabIndex={0}
+                aria-label={`${point.label}: ${point.count} companies`}
+                className="w-full max-w-12 rounded-t-lg bg-linear-to-t from-fruition-800 to-emerald-400 outline-none transition hover:from-fruition-700 focus-visible:ring-2 focus-visible:ring-fruition-400"
+                style={{ height: `${height}%` }}
+              />
+            </span>
             <span className="max-w-full truncate text-[10px] font-medium text-slate-500">{point.label}</span>
           </div>
         );

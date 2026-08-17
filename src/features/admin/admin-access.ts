@@ -20,6 +20,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { href: "/users", ability: "users" },
   { href: "/support", ability: "support" },
   { href: "/billing", ability: "billing" },
+  { href: "/revenue", ability: "revenue" },
   { href: "/careers", ability: "careers" },
   { href: "/blog", ability: "blog" },
   { href: "/administrators", ability: "administrators" },

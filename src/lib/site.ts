@@ -20,3 +20,14 @@ export const appLink = {
 export function publicVacancyUrl(slug: string): string {
   return `${site.marketingUrl}/careers/${slug}`;
 }
+
+/**
+ * A published post on the marketing site.
+ *
+ * Absolute on purpose. A bare `/blog/{slug}` is resolved against whichever host
+ * the link is rendered on, so from the admin console it lands on the admin
+ * editor — which expects a numeric id, not a slug.
+ */
+export function publicBlogUrl(slug: string): string {
+  return `${site.marketingUrl}/blog/${slug}`;
+}

@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ExternalLink, FileText, Pencil, Plus, Search, Trash2 } from "lucide-react";
+
+import { publicBlogUrl } from "@/lib/site";
+import { ExternalLink, Eye, FileText, ImageOff, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -35,7 +37,8 @@ export function BlogPostsPage() {
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
-  const posts = useBlogPosts({ page, search, status, sort: "-created_at" });
+  const [sort, setSort] = useState("-created_at");
+  const posts = useBlogPosts({ page, search, status, sort });
   const rows = posts.data?.data ?? [];
 
   const confirmDelete = async () => {
@@ -83,6 +86,20 @@ export function BlogPostsPage() {
           <option value="draft">Drafts</option>
           <option value="published">Published</option>
         </select>
+        <select
+          className={selectClass}
+          value={sort}
+          onChange={(event) => {
+            setSort(event.target.value);
+            setPage(1);
+          }}
+          aria-label="Sort posts"
+        >
+          <option value="-created_at">Newest first</option>
+          <option value="-views">Most read</option>
+          <option value="-published_at">Recently published</option>
+          <option value="title">Title A–Z</option>
+        </select>
       </div>
 
       {posts.isError ? (
@@ -105,7 +122,9 @@ export function BlogPostsPage() {
                     key={post.id}
                     className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <div className="min-w-0">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <CoverThumb post={post} />
+                      <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <StatusPill post={post} />
                         <Link
@@ -122,16 +141,31 @@ export function BlogPostsPage() {
                           ? ` · Published ${formatAdminDate(post.published_at)}`
                           : ` · Updated ${formatAdminDate(post.updated_at)}`}
                       </p>
+                      </div>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-1.5">
+                      {/*
+                        Only for published posts: a draft cannot be read by
+                        anyone, so its count is always zero and says nothing.
+                      */}
+                      {post.is_published && (
+                        <span
+                          className="mr-1 inline-flex items-center gap-1 text-xs font-medium text-slate-500 tabular-nums"
+                          title={`${post.views.toLocaleString("en-NG")} ${post.views === 1 ? "read" : "reads"} of this article`}
+                        >
+                          <Eye className="size-3.5" aria-hidden="true" />
+                          {post.views.toLocaleString("en-NG")}
+                          <span className="sr-only"> views</span>
+                        </span>
+                      )}
                       {post.is_published && (
                         <Button
                           variant="ghost"
                           size="sm"
                           render={
                             <a
-                              href={`/blog/${post.slug}`}
+                              href={publicBlogUrl(post.slug)}
                               target="_blank"
                               rel="noopener noreferrer"
                             />
@@ -221,5 +255,35 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * The post's cover, at a glance.
+ *
+ * A plain img rather than next/image: the file is served by the API on another
+ * origin, and the admin list does not need the optimiser for a 40px thumbnail.
+ * Falls back to a placeholder so rows stay aligned whether or not there is art.
+ */
+function CoverThumb({ post }: { post: BlogPost }) {
+  if (!post.cover_image_url) {
+    return (
+      <span
+        className="grid size-11 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-400 ring-1 ring-slate-200"
+        title="No cover image"
+      >
+        <ImageOff className="size-4" />
+      </span>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- served by the API, not a static asset
+    <img
+      src={post.cover_image_url}
+      alt=""
+      loading="lazy"
+      className="size-11 shrink-0 rounded-lg object-cover ring-1 ring-slate-200"
+    />
   );
 }

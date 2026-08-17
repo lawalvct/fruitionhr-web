@@ -22,6 +22,8 @@ import type {
   PlatformAdministrator,
   PlatformRole,
   PlatformRoleInput,
+  RevenueCompany,
+  RevenueOverview,
   TenantListQuery,
   TenantUpdateInput,
 } from "./types";
@@ -43,7 +45,37 @@ export const adminKeys = {
     ["admin", "administrators", "list", query] as const,
   activity: (page: number) => ["admin", "activity", page] as const,
   platformRoles: ["admin", "platform-roles"] as const,
+  revenue: (months: number) => ["admin", "revenue", months] as const,
+  revenueCompanies: (query: Record<string, unknown>) =>
+    ["admin", "revenue", "companies", query] as const,
 };
+
+export function useRevenueOverview(months = 12) {
+  return useQuery({
+    queryKey: adminKeys.revenue(months),
+    queryFn: async () => {
+      const { data } = await api.get<ResourceResponse<RevenueOverview>>(
+        `${ADMIN_API}/revenue`,
+        { params: { months } },
+      );
+      return data.data;
+    },
+  });
+}
+
+export function useRevenueCompanies(query: { search?: string; sort?: string; paying_only?: boolean }) {
+  return useQuery({
+    queryKey: adminKeys.revenueCompanies(query),
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const { data } = await api.get<PaginatedResponse<RevenueCompany>>(
+        `${ADMIN_API}/revenue/companies`,
+        { params: query },
+      );
+      return data;
+    },
+  });
+}
 
 /**
  * Roles, plus the catalogue of sections a role can be given.

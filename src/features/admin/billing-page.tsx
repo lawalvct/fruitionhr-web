@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, CreditCard, Pencil, Plus, Users, Wallet } from "lucide-react";
+import { Banknote, CreditCard, Pencil, Plus, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -54,14 +54,7 @@ export function AdminBillingPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <AdminMetricCard
-          label="Collected"
-          value={summary ? formatKobo(summary.collected) : "—"}
-          detail="Settled payments to date"
-          icon={Wallet}
-          tone="green"
-        />
+      <div className="grid gap-4 sm:grid-cols-3">
         <AdminMetricCard
           label="Active"
           value={summary?.active ?? 0}
@@ -245,15 +238,6 @@ export function AdminBillingPage() {
       />
     </div>
   );
-}
-
-/** Kobo → a compact ₦ string for the metric tiles. */
-function formatKobo(kobo: number): string {
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-    maximumFractionDigits: 0,
-  }).format(kobo / 100);
 }
 
 function PlanDialog({

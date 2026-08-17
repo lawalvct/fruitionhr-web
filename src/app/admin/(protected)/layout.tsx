@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, BriefcaseBusiness, Building2, CreditCard, LayoutDashboard, LifeBuoy, Newspaper, ShieldCheck, Users } from "lucide-react";
+import { Activity, BriefcaseBusiness, Building2, CreditCard, LayoutDashboard, LifeBuoy, Newspaper, ShieldCheck, TrendingUp, Users } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 
@@ -21,6 +21,7 @@ const nav: (NavItem & { ability: PlatformAbility })[] = [
   { href: "/users", label: "Users", icon: Users, ability: "users" },
   { href: "/support", label: "Support", icon: LifeBuoy, ability: "support" },
   { href: "/billing", label: "Billing", icon: CreditCard, ability: "billing" },
+  { href: "/revenue", label: "Revenue", icon: TrendingUp, ability: "revenue" },
   { href: "/careers", label: "Careers", icon: BriefcaseBusiness, ability: "careers" },
   { href: "/blog", label: "Blog", icon: Newspaper, ability: "blog" },
   { href: "/administrators", label: "Administrators", icon: ShieldCheck, ability: "administrators" },

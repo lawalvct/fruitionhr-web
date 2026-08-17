@@ -195,3 +195,65 @@ export interface PlatformRoleInput {
   description?: string | null;
   abilities: PlatformAbility[];
 }
+
+/* ── Platform revenue ─────────────────────────────────────────────────────── */
+
+/** All money figures are integer kobo, formatted at the edge by MoneyText. */
+export interface RevenueOverview {
+  generated_at: string;
+  collected: {
+    this_month: number;
+    last_month: number;
+    this_year: number;
+    all_time: number;
+  };
+  recurring: {
+    mrr: number;
+    arr: number;
+    paying_companies: number;
+    average_per_company: number;
+  };
+  expected: {
+    next_30_days: number;
+    next_90_days: number;
+    /** Contingent on trials converting — never added to expected income. */
+    trial_pipeline: number;
+    trials_converting_soon: number;
+    at_risk: number;
+    at_risk_companies: number;
+  };
+  monthly_trend: RevenueMonth[];
+  by_plan: RevenuePlanSlice[];
+}
+
+export interface RevenueMonth {
+  period: string;
+  label: string;
+  amount: number;
+  payments: number;
+}
+
+export interface RevenuePlanSlice {
+  plan: string;
+  companies: number;
+  mrr: number;
+  employees: number;
+}
+
+export interface RevenueCompany {
+  id: number;
+  name: string;
+  slug: string;
+  status: TenantStatus;
+  customer_since: string | null;
+  collected: number;
+  payments_count: number;
+  subscription: {
+    status: string;
+    plan: string | null;
+    employee_count: number;
+    amount: number;
+    is_earning: boolean;
+    renews_at: string | null;
+  } | null;
+}
