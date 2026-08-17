@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, BriefcaseBusiness, Building2, CreditCard, LayoutDashboard, Newspaper, ShieldCheck, Users } from "lucide-react";
+import { Activity, BriefcaseBusiness, Building2, CreditCard, LayoutDashboard, LifeBuoy, Newspaper, ShieldCheck, Users } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { RequireAuth } from "@/features/auth/require-auth";
@@ -10,6 +10,7 @@ const nav: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/tenants", label: "Companies", icon: Building2 },
   { href: "/users", label: "Users", icon: Users },
+  { href: "/support", label: "Support", icon: LifeBuoy },
   { href: "/billing", label: "Billing", icon: CreditCard },
   { href: "/careers", label: "Careers", icon: BriefcaseBusiness },
   { href: "/blog", label: "Blog", icon: Newspaper },

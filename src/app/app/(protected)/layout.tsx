@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   Clock,
   CreditCard,
+  LifeBuoy,
   Gauge,
   HandCoins,
   LayoutDashboard,
@@ -43,6 +44,7 @@ const nav: NavItem[] = [
   { group: "Money", href: "/loans", label: "Loans & advances", icon: HandCoins, permission: "loans.view" },
 
   { group: "Company", href: "/billing", label: "Billing", icon: CreditCard, permission: "company.manage" },
+  { group: "Company", href: "/support", label: "Support", icon: LifeBuoy },
   { group: "Company", href: "/settings/organisation", label: "Settings", icon: Settings, permission: "company.view" },
   { group: "Company", href: "/settings/access", label: "Access control", icon: ShieldCheck, permission: "roles.manage" },
 

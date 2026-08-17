@@ -1,13 +1,22 @@
 'use client';
 
-import { CheckCircle2, FileText, LoaderCircle, ShieldCheck, UploadCloud } from 'lucide-react';
+import { CheckCircle2, FileText, LoaderCircle, MailCheck, ShieldCheck, UploadCloud } from 'lucide-react';
 import Link from 'next/link';
 import { type FormEvent, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { api, apiErrorMessage, isValidationError } from '@/lib/api';
+import { api, apiErrorMessage, isConflictError, isValidationError } from '@/lib/api';
+import { type AppliedRecord, forgetApplication, rememberApplication, useAppliedRecord } from './applied-vacancies';
 
 type FieldErrors = Record<string, string | undefined>;
+
+/** Fields with a FieldError slot below. Anything else has to reach the banner instead. */
+const VISIBLE_FIELDS = new Set([
+  'first_name', 'last_name', 'email', 'phone', 'city', 'state',
+  'linkedin_url', 'cover_letter', 'resume', 'privacy_consent',
+]);
+
+const HONEYPOT_FIELD = 'referrer_code';
 
 const inputClass = 'mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-fruition-500 focus:ring-4 focus:ring-fruition-100';
 const textareaClass = 'mt-2 min-h-36 w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-fruition-500 focus:ring-4 focus:ring-fruition-100';
@@ -29,13 +38,20 @@ export function PublicApplicationForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [reference, setReference] = useState<string | null>(null);
+  const [justSubmitted, setJustSubmitted] = useState(false);
+  const applied = useAppliedRecord(slug);
+
+  function recordApplication(email: string, reference: string | null) {
+    const record: AppliedRecord = { reference, email, at: new Date().toISOString() };
+    rememberApplication(slug, record);
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
     const resume = data.get('resume');
+    const email = String(data.get('email') ?? '');
 
     setFieldErrors({});
     setFormError(null);
@@ -54,13 +70,31 @@ export function PublicApplicationForm({
 
     try {
       const response = await api.post<{ data: { reference: string } }>(`/api/v1/careers/${slug}/apply`, data);
-      setReference(response.data.data.reference);
+      setJustSubmitted(true);
+      recordApplication(email, response.data.data.reference);
       form.reset();
     } catch (error) {
       if (isValidationError(error)) {
+        const errors = error.response!.data.errors;
         setFieldErrors(Object.fromEntries(
-          Object.entries(error.response!.data.errors).map(([name, messages]) => [name, messages[0]]),
+          Object.entries(errors).map(([name, messages]) => [name, messages[0]]),
         ));
+
+        // An error on a field the form does not render would otherwise vanish:
+        // the spinner stops, nothing appears, and the candidate is left
+        // clicking Submit forever. Everything unaccounted for goes to the
+        // banner at the top of the form.
+        const unattached = Object.keys(errors).filter((name) => !VISIBLE_FIELDS.has(name));
+        if (unattached.includes(HONEYPOT_FIELD)) {
+          setFormError('We could not verify this submission. If your browser or password manager filled the form in for you, clear it, type your details in yourself, and try again.');
+        } else if (unattached.length > 0) {
+          setFormError(unattached.map((name) => errors[name][0]).join(' '));
+        }
+      } else if (isConflictError(error)) {
+        // The server has seen this address on this vacancy before — this
+        // device just did not know yet. Remember it so the next visit is
+        // answered without another upload.
+        recordApplication(email, null);
       } else {
         setFormError(apiErrorMessage(error));
       }
@@ -69,25 +103,15 @@ export function PublicApplicationForm({
     }
   }
 
-  if (reference) {
+  if (applied) {
     return (
-      <div className='rounded-3xl border border-fruition-200 bg-fruition-50 p-6 text-center sm:p-8' role='status'>
-        <span className='mx-auto grid size-14 place-items-center rounded-2xl bg-white text-fruition-700 shadow-sm'>
-          <CheckCircle2 className='size-7' />
-        </span>
-        <h2 className='mt-5 text-2xl font-extrabold tracking-tight text-slate-900'>Application received</h2>
-        <p className='mt-3 text-sm leading-7 text-slate-600'>
-          Your application for <strong>{vacancyTitle}</strong> has been sent to {companyName}.
-        </p>
-        <div className='mt-5 rounded-xl border border-fruition-200 bg-white px-4 py-3'>
-          <p className='text-xs font-semibold tracking-wide text-slate-500 uppercase'>Application reference</p>
-          <p className='mt-1 text-lg font-extrabold text-fruition-800'>{reference}</p>
-        </div>
-        <p className='mt-4 text-xs leading-5 text-slate-500'>Keep this reference for your records. The hiring team will contact you if your profile progresses.</p>
-        <Button className='mt-6 rounded-xl' variant='outline' render={<Link href='/careers' />}>
-          Explore more vacancies
-        </Button>
-      </div>
+      <AppliedPanel
+        record={applied}
+        justSubmitted={justSubmitted}
+        vacancyTitle={vacancyTitle}
+        companyName={companyName}
+        onSomeoneElse={() => forgetApplication(slug)}
+      />
     );
   }
 
@@ -168,9 +192,27 @@ export function PublicApplicationForm({
         <FieldError errors={fieldErrors} name='resume' />
       </label>
 
+      {/*
+        Honeypot: off-screen, unfocusable, and hidden from assistive tech, so
+        only an automated filler reaches it. The name is deliberately inert —
+        it was once "website", which password managers and browser autofill
+        cheerfully filled in on a contact form, turning real candidates away as
+        bots. autocomplete="off" alone is advisory and widely ignored, hence
+        the per-manager opt-outs. Must match PublicApplicationRequest.
+      */}
       <div className='absolute -left-[10000px] top-auto size-px overflow-hidden' aria-hidden='true'>
-        <label htmlFor='website'>Website</label>
-        <input id='website' name='website' tabIndex={-1} autoComplete='off' />
+        <label htmlFor='referrer_code'>Referrer code</label>
+        <input
+          id='referrer_code'
+          name='referrer_code'
+          type='text'
+          tabIndex={-1}
+          autoComplete='off'
+          data-lpignore='true'
+          data-1p-ignore=''
+          data-bwignore=''
+          data-form-type='other'
+        />
       </div>
 
       <label className='mt-5 flex items-start gap-3 rounded-xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-600'>
@@ -186,5 +228,76 @@ export function PublicApplicationForm({
         <ShieldCheck className='size-3.5' /> Your information is sent securely to the hiring company.
       </p>
     </form>
+  );
+}
+
+/**
+ * Shown in place of the form once this device knows the visitor has applied —
+ * whether they just did, or did so on an earlier visit.
+ */
+function AppliedPanel({
+  record,
+  justSubmitted,
+  vacancyTitle,
+  companyName,
+  onSomeoneElse,
+}: {
+  record: AppliedRecord;
+  justSubmitted: boolean;
+  vacancyTitle: string;
+  companyName: string;
+  /** Clears the local record so a different person on this device can apply. */
+  onSomeoneElse: () => void;
+}) {
+  const appliedOn = new Intl.DateTimeFormat('en-NG', { dateStyle: 'long' }).format(new Date(record.at));
+
+  return (
+    <div className='rounded-3xl border border-fruition-200 bg-fruition-50 p-6 text-center sm:p-8' role='status'>
+      <span className='mx-auto grid size-14 place-items-center rounded-2xl bg-white text-fruition-700 shadow-sm'>
+        {justSubmitted ? <CheckCircle2 className='size-7' /> : <MailCheck className='size-7' />}
+      </span>
+
+      <h2 className='mt-5 text-2xl font-extrabold tracking-tight text-slate-900'>
+        {justSubmitted ? 'Application received' : 'You have already applied'}
+      </h2>
+
+      <p className='mt-3 text-sm leading-7 text-slate-600'>
+        {justSubmitted ? (
+          <>Your application for <strong>{vacancyTitle}</strong> has been sent to {companyName}.</>
+        ) : (
+          <>You applied for <strong>{vacancyTitle}</strong> at {companyName} on {appliedOn}. There is no need to send it again — {companyName} already has your details.</>
+        )}
+      </p>
+
+      {record.reference ? (
+        <div className='mt-5 rounded-xl border border-fruition-200 bg-white px-4 py-3'>
+          <p className='text-xs font-semibold tracking-wide text-slate-500 uppercase'>Application reference</p>
+          <p className='mt-1 text-lg font-extrabold text-fruition-800'>{record.reference}</p>
+        </div>
+      ) : null}
+
+      {record.email ? (
+        <p className='mt-4 text-xs leading-5 text-slate-500'>Sent using {record.email}</p>
+      ) : null}
+
+      <p className='mt-4 text-xs leading-5 text-slate-500'>
+        {justSubmitted
+          ? 'Keep this reference for your records. The hiring team will contact you if your profile progresses.'
+          : 'The hiring team will contact you if your profile progresses.'}
+      </p>
+
+      <Button className='mt-6 rounded-xl' variant='outline' render={<Link href='/careers' />}>
+        Explore more vacancies
+      </Button>
+
+      {!justSubmitted && (
+        <p className='mt-5 border-t border-fruition-200 pt-4 text-xs text-slate-500'>
+          Sharing this device?{' '}
+          <button type='button' onClick={onSomeoneElse} className='font-semibold text-fruition-800 underline underline-offset-2 hover:text-fruition-700'>
+            Apply with a different email
+          </button>
+        </p>
+      )}
+    </div>
   );
 }

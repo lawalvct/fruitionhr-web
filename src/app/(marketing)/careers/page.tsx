@@ -17,6 +17,7 @@ import {
   type PublicCareersQuery,
   type PublicVacancy,
 } from '@/features/recruitment/public-careers';
+import { CompanyLogo } from '@/features/recruitment/company-logo';
 
 export const metadata: Metadata = {
   title: 'Careers',
@@ -32,10 +33,6 @@ function first(value: string | string[] | undefined): string {
 function formatDate(value: string | null): string | null {
   if (!value) return null;
   return new Intl.DateTimeFormat('en-NG', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`));
-}
-
-function initials(name: string): string {
-  return name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
 }
 
 function excerpt(value: string): string {
@@ -81,9 +78,7 @@ function VacancyCard({ vacancy }: { vacancy: PublicVacancy }) {
   return (
     <article className='group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_15px_45px_rgba(15,23,42,0.045)] transition duration-300 hover:-translate-y-1 hover:border-fruition-200 hover:shadow-[0_22px_55px_rgba(4,120,87,0.1)]'>
       <div className='flex items-start gap-4'>
-        <span className='grid size-12 shrink-0 place-items-center rounded-2xl bg-fruition-50 text-sm font-extrabold text-fruition-800 ring-1 ring-fruition-100'>
-          {initials(vacancy.company.name)}
-        </span>
+        <CompanyLogo company={vacancy.company} className='size-12 rounded-2xl text-sm' />
         <div className='min-w-0'>
           <p className='truncate text-sm font-semibold text-fruition-700'>{vacancy.company.name}</p>
           <h2 className='mt-1 text-xl leading-7 font-extrabold tracking-tight text-slate-900'>{vacancy.title}</h2>

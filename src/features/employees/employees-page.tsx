@@ -10,7 +10,7 @@ import { Can } from "@/components/can";
 import { DataTable } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
 import { PageLoader } from "@/components/page-loader";
-import { MoneyText } from "@/components/money-text";
+import { MaskedMoney } from "@/components/masked-money";
 import { StatusBadge } from "@/components/status-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -110,7 +110,7 @@ export function EmployeesPage() {
         id: "current_basic_salary",
         header: "Current basic salary",
         cell: ({ row }: { row: { original: Employee } }) => row.original.current_basic_salary != null ? (
-          <span className="whitespace-nowrap font-medium"><MoneyText kobo={row.original.current_basic_salary} /></span>
+          <MaskedMoney kobo={row.original.current_basic_salary} label={row.original.full_name} />
         ) : (
           <Can permission="employees.manage_salary">
             <Button variant="ghost" size="icon" title={`Assign salary for ${row.original.full_name}`} aria-label={`Assign salary for ${row.original.full_name}`} render={<Link href={`/employees/${row.original.id}?tab=compensation`} />}>

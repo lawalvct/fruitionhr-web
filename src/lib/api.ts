@@ -39,6 +39,11 @@ export function isValidationError(
   return axios.isAxiosError(error) && error.response?.status === 422;
 }
 
+/** The server refused because the thing already exists — a duplicate, not a mistake. */
+export function isConflictError(error: unknown): error is AxiosError<{ message?: string }> {
+  return axios.isAxiosError(error) && error.response?.status === 409;
+}
+
 /** First human-readable message from an API error, for toasts/form banners. */
 export function apiErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {

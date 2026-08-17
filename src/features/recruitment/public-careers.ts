@@ -10,7 +10,7 @@ export interface PublicVacancy {
   opens_at: string | null;
   closes_at: string | null;
   published_at: string | null;
-  company: { name: string; slug: string };
+  company: { name: string; slug: string; has_logo?: boolean };
   employment_type: { name: string } | null;
   position: { title: string } | null;
   department: { name: string } | null;

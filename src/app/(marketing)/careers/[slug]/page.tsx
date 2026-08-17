@@ -13,16 +13,13 @@ import {
 
 import { PublicApplicationForm } from '@/features/recruitment/public-application-form';
 import { getPublicVacancy } from '@/features/recruitment/public-careers';
+import { CompanyLogo } from '@/features/recruitment/company-logo';
 
 type PageProps = { params: Promise<{ slug: string }> };
 
 function formatDate(value: string | null): string | null {
   if (!value) return null;
   return new Intl.DateTimeFormat('en-NG', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`));
-}
-
-function initials(name: string): string {
-  return name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -56,9 +53,7 @@ export default async function VacancyPage({ params }: PageProps) {
           </Link>
 
           <div className='mt-8 flex flex-col gap-6 sm:flex-row sm:items-start'>
-            <span className='grid size-16 shrink-0 place-items-center rounded-2xl bg-fruition-50 text-lg font-extrabold text-fruition-800 ring-1 ring-fruition-100 sm:size-20'>
-              {initials(vacancy.company.name)}
-            </span>
+            <CompanyLogo company={vacancy.company} className='size-16 rounded-2xl text-lg sm:size-20' />
             <div className='min-w-0 flex-1'>
               <p className='text-sm font-bold text-fruition-700'>{vacancy.company.name}</p>
               <h1 className='mt-2 max-w-4xl text-3xl leading-tight font-extrabold tracking-[-0.035em] text-slate-950 sm:text-5xl'>{vacancy.title}</h1>
