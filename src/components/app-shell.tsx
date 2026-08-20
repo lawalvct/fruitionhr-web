@@ -323,6 +323,7 @@ function routePageTitle(pathname: string, items: NavItem[], fallback: string): s
   if (pathname === "/employees/new") return "Add employee";
   if (/^\/employees\/[^/]+\/edit$/.test(pathname)) return "Edit employee";
   if (/^\/employees\/[^/]+$/.test(pathname)) return "Employee profile";
+  if (pathname === "/payroll/setup") return "Salary setup";
   if (/^\/payroll\/[^/]+$/.test(pathname)) return "Payroll run";
   if (pathname === "/settings/organisation") return "Organisation settings";
 

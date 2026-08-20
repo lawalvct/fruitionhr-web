@@ -3,8 +3,16 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Edit, Plus, Trash2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
-import { useForm, type FieldErrors, type UseFormRegister } from "react-hook-form";
+import {
+  get,
+  useForm,
+  type FieldErrors,
+  type FieldValues,
+  type Path,
+  type UseFormRegister,
+} from "react-hook-form";
 import { z } from "zod";
 
 import { Can } from "@/components/can";
@@ -18,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OnboardingPreferences } from "@/features/onboarding/onboarding-preferences";
+import { PayrollSettingsCard } from "@/features/payroll/payroll-settings-card";
 import { mapLaravelErrorsToForm, nullableNumber } from "@/lib/forms";
 import type {
   Branch,
@@ -44,6 +53,7 @@ const tabs = [
   { id: "employment-types", label: "Employment types" },
   { id: "holidays", label: "Holidays" },
   { id: "preferences", label: "Preferences" },
+  { id: "features", label: "Features" },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -75,7 +85,7 @@ function RowActions<TRecord extends { id: number }>({
   );
 }
 
-function Field({
+function Field<TValues extends FieldValues>({
   label,
   name,
   register,
@@ -83,12 +93,12 @@ function Field({
   type = "text",
 }: {
   label: string;
-  name: string;
-  register: UseFormRegister<any>;
-  errors: FieldErrors<any>;
+  name: Path<TValues>;
+  register: UseFormRegister<TValues>;
+  errors: FieldErrors<TValues>;
   type?: string;
 }) {
-  const error = errors[name]?.message?.toString();
+  const error = get(errors, name)?.message?.toString();
 
   return (
     <div className="grid gap-2">
@@ -105,10 +115,18 @@ function Field({
   );
 }
 
-function ActiveField({ register }: { register: UseFormRegister<any> }) {
+function ActiveField<TValues extends FieldValues>({
+  register,
+}: {
+  register: UseFormRegister<TValues>;
+}) {
   return (
     <label className="flex items-center gap-2 text-sm">
-      <input type="checkbox" className="size-4 rounded border-border" {...register("is_active")} />
+      <input
+        type="checkbox"
+        className="size-4 rounded border-border"
+        {...register("is_active" as Path<TValues>)}
+      />
       Active
     </label>
   );
@@ -239,7 +257,7 @@ function DepartmentForm({
   );
 }
 
-function SelectField({
+function SelectField<TValues extends FieldValues>({
   label,
   name,
   register,
@@ -247,12 +265,12 @@ function SelectField({
   options,
 }: {
   label: string;
-  name: string;
-  register: UseFormRegister<any>;
-  errors: FieldErrors<any>;
+  name: Path<TValues>;
+  register: UseFormRegister<TValues>;
+  errors: FieldErrors<TValues>;
   options: { id: number; name: string }[];
 }) {
-  const error = errors[name]?.message?.toString();
+  const error = get(errors, name)?.message?.toString();
 
   return (
     <div className="grid gap-2">
@@ -596,7 +614,12 @@ function ResourceSection<TRecord extends CompanyResource, TInput>({
 }
 
 export function OrganisationPage() {
-  const [activeTab, setActiveTab] = useState<TabId>("branches");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const activeTab: TabId = tabs.some((tab) => tab.id === requestedTab)
+    ? requestedTab as TabId
+    : "branches";
   const options = useCompanyOptions();
   const branches = options.branches.data ?? [];
   const departments = options.departments.data ?? [];
@@ -688,7 +711,11 @@ export function OrganisationPage() {
           <button
             key={tab.id}
             type="button"
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("tab", tab.id);
+              router.replace(`/settings/organisation?${params.toString()}`);
+            }}
             className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium ${
               activeTab === tab.id
                 ? "border-primary text-foreground"
@@ -777,6 +804,7 @@ export function OrganisationPage() {
       )}
 
       {activeTab === "preferences" && <OnboardingPreferences />}
+      {activeTab === "features" && <PayrollSettingsCard />}
     </div>
   );
 }

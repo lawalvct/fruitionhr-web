@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { mapLaravelErrorsToForm, nullableNumber } from "@/lib/forms";
 import { DocumentsPanel } from "@/features/documents/documents-panel";
 import { CompensationTab } from "@/features/payroll/compensation-tab";
+import { useCan } from "@/features/auth/use-auth";
 import { useCompanyOptions } from "@/features/company/use-company";
 import { useAssignEmployee, useEmployee, useEmployeePhoto, useProvisionEssAccess } from "@/features/employees/use-employees";
 import { apiErrorMessage } from "@/lib/api";
@@ -155,6 +156,7 @@ function AssignmentDialog({
 export function EmployeeProfilePage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
+  const canViewSalary = useCan("employees.view_salary");
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>(() =>
     searchParams.get("tab")?.toLowerCase() === "compensation" ? "Compensation" : "Overview",
   );
@@ -163,6 +165,10 @@ export function EmployeeProfilePage() {
   const provisionEss = useProvisionEssAccess(params.id);
   const { data: photoBlob } = useEmployeePhoto(employee?.photo_url);
   const photoUrl = useMemo(() => (photoBlob ? URL.createObjectURL(photoBlob) : null), [photoBlob]);
+  const visibleTabs = canViewSalary ? tabs : tabs.filter((tab) => tab !== "Compensation");
+  const displayedActiveTab = !canViewSalary && activeTab === "Compensation"
+    ? "Overview"
+    : activeTab;
 
   useEffect(() => {
     return () => {
@@ -224,13 +230,13 @@ export function EmployeeProfilePage() {
       </section>
 
       <div className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-muted/30 p-1 dark:border-slate-700">
-        {tabs.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => setActiveTab(tab)}
             className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition ${
-              activeTab === tab ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
+              displayedActiveTab === tab ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
             }`}
           >
             {tab}
@@ -238,7 +244,7 @@ export function EmployeeProfilePage() {
         ))}
       </div>
 
-      {activeTab === "Overview" && (
+      {displayedActiveTab === "Overview" && (
         <div className="space-y-4">
         <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[
@@ -284,7 +290,7 @@ export function EmployeeProfilePage() {
         </div>
       )}
 
-      {activeTab === "Employment history" && (
+      {displayedActiveTab === "Employment history" && (
         <div className="overflow-hidden rounded-md border">
           <table className="w-full text-sm">
             <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
@@ -311,7 +317,7 @@ export function EmployeeProfilePage() {
         </div>
       )}
 
-      {activeTab === "Contacts" && (
+      {displayedActiveTab === "Contacts" && (
         <div className="grid gap-3 md:grid-cols-2">
           {(employee.contacts ?? []).map((contact) => (
             <div key={contact.id} className="rounded-md border p-3 text-sm">
@@ -323,7 +329,7 @@ export function EmployeeProfilePage() {
         </div>
       )}
 
-      {activeTab === "Bank & statutory" && (
+      {displayedActiveTab === "Bank & statutory" && (
         <div className="grid gap-4 md:grid-cols-2">
           <section className="space-y-2">
             <h3 className="font-heading text-base font-semibold">Bank accounts</h3>
@@ -343,11 +349,11 @@ export function EmployeeProfilePage() {
         </div>
       )}
 
-      {activeTab === "Compensation" && (
-        <CompensationTab employeeId={params.id} />
+      {displayedActiveTab === "Compensation" && canViewSalary && (
+        <CompensationTab employeeId={params.id} enabled />
       )}
 
-      {activeTab === "Documents" && (
+      {displayedActiveTab === "Documents" && (
         <DocumentsPanel
           owner={{ ownerType: "employee", ownerId: params.id }}
           managePermission="employees.update"

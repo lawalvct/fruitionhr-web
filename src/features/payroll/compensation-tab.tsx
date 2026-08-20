@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiErrorMessage } from "@/lib/api";
 import {
+  calcSummary,
+  isPercentCalc,
   isReservedBasicSalaryComponent,
   useAssignSalary,
   useEmployeeSalary,
@@ -21,13 +23,21 @@ import {
   useSalaryHistory,
   useSalaryComponents,
   useSalaryStructures,
+  usePayrollSettings,
 } from "@/features/payroll/use-payroll";
 
-export function CompensationTab({ employeeId }: { employeeId: string }) {
-  const { data: salary, isLoading } = useEmployeeSalary(employeeId);
-  const { data: salaryHistory } = useSalaryHistory(employeeId);
-  const { data: structures } = useSalaryStructures();
-  const { data: components } = useSalaryComponents();
+export function CompensationTab({
+  employeeId,
+  enabled = true,
+}: {
+  employeeId: string;
+  enabled?: boolean;
+}) {
+  const { data: salary, isLoading } = useEmployeeSalary(employeeId, enabled);
+  const { data: salaryHistory } = useSalaryHistory(employeeId, enabled);
+  const { data: structures } = useSalaryStructures(enabled);
+  const { data: components } = useSalaryComponents(enabled);
+  const { data: payrollSettings } = usePayrollSettings(enabled);
   const assign = useAssignSalary(employeeId);
   const increaseSalary = useIncreaseSalary(employeeId);
 
@@ -47,23 +57,40 @@ export function CompensationTab({ employeeId }: { employeeId: string }) {
   if (isLoading) return <Skeleton className="h-40 w-full" />;
 
   const selectedStructure = structures?.find((structure) => structure.id === Number(structureId));
+  const advancedFormulasEnabled = payrollSettings?.advanced_salary_formulas_enabled ?? false;
+  const formulaStructureIds = new Set(
+    (structures ?? [])
+      .filter((structure) => structure.components.some((line) =>
+        Boolean(line.uses_formula)
+        || components?.find((component) => component.id === line.salary_component_id)?.calc_type === "formula",
+      ))
+      .map((structure) => structure.id),
+  );
+  const selectedStructureUsesFormula = selectedStructure
+    ? formulaStructureIds.has(selectedStructure.id)
+    : false;
   const structuredComponents = selectedStructure?.components.filter(
     (component) => !isReservedBasicSalaryComponent(component),
   ) ?? [];
+  const activeFormulaDependencyIds = new Set(
+    structuredComponents
+      .filter((line) => Boolean(line.uses_formula)
+        && !excludedIds.includes(line.salary_component_id)
+        && !(line.salary_component_id in overrideAmounts))
+      .flatMap((line) => line.formula?.dependency_ids ?? []),
+  );
   const structuredComponentIds = new Set(structuredComponents.map((component) => component.salary_component_id));
   const availableAdditionalComponents = components?.filter(
     (component) => component.is_active
       && !isReservedBasicSalaryComponent(component)
+      && component.calc_type !== "formula"
       && !structuredComponentIds.has(component.id)
       && !(component.id in additionalAmounts),
   ) ?? [];
 
   const structureDefaultNaira = (line: (typeof structuredComponents)[number]) => {
     if (line.amount != null) return line.amount / 100;
-
-    const component = components?.find((item) => item.id === line.salary_component_id);
-    const percent = line.percent ?? component?.percent ?? 0;
-    return basic * percent / 100;
+    return null;
   };
 
   const startEditing = () => {
@@ -109,6 +136,11 @@ export function CompensationTab({ employeeId }: { employeeId: string }) {
   };
 
   const submit = async () => {
+    if (!advancedFormulasEnabled && selectedStructureUsesFormula) {
+      toast.error("Enable advanced salary formulas before assigning a structure that uses them.");
+      return;
+    }
+
     try {
       await assign.mutateAsync({
         basic_salary: Math.round(basic * 100),
@@ -160,8 +192,11 @@ export function CompensationTab({ employeeId }: { employeeId: string }) {
 
       {salary && (
         <div className="rounded-lg border">
-          <div className="border-b bg-muted/40 px-4 py-2 text-sm font-medium">
-            Breakdown {salary.structure ? `· ${salary.structure.name}` : ""}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/40 px-4 py-2 text-sm font-medium">
+            <span>Breakdown {salary.structure ? `· ${salary.structure.name}` : ""}</span>
+            {salary.uses_advanced_formula && (
+              <Badge variant="secondary">Includes published formula</Badge>
+            )}
           </div>
           <ul className="divide-y text-sm">
             <li className="flex justify-between px-4 py-2">
@@ -181,6 +216,18 @@ export function CompensationTab({ employeeId }: { employeeId: string }) {
             <li className="flex justify-between bg-muted/30 px-4 py-2 font-semibold">
               <span>Gross</span><MoneyText kobo={salary.breakdown.gross} />
             </li>
+            {salary.breakdown.deductions.map((deduction) => (
+              <li key={deduction.code} className="flex justify-between px-4 py-2 text-rose-700 dark:text-rose-300">
+                <span>{deduction.name} <span className="text-xs opacity-70">(deduction)</span></span>
+                <MoneyText kobo={-deduction.amount} />
+              </li>
+            ))}
+            {salary.breakdown.employer_contributions.map((contribution) => (
+              <li key={contribution.code} className="flex justify-between bg-blue-50/60 px-4 py-2 text-blue-900 dark:bg-blue-950/20 dark:text-blue-200">
+                <span>{contribution.name} <span className="text-xs opacity-70">(company cost)</span></span>
+                <MoneyText kobo={contribution.amount} />
+              </li>
+            ))}
           </ul>
         </div>
       )}
@@ -246,12 +293,22 @@ export function CompensationTab({ employeeId }: { employeeId: string }) {
                     .join(", ");
 
                   return (
-                    <option key={s.id} value={s.id}>
+                    <option
+                      key={s.id}
+                      value={s.id}
+                      disabled={!advancedFormulasEnabled && formulaStructureIds.has(s.id)}
+                    >
                       {s.name}{componentNames ? ` (${componentNames})` : ""}
+                      {!advancedFormulasEnabled && formulaStructureIds.has(s.id) ? " — formula feature off" : ""}
                     </option>
                   );
                 })}
               </select>
+              {!advancedFormulasEnabled && formulaStructureIds.size > 0 && (
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  Formula structures remain visible for salary history, but cannot be assigned until Advanced salary formulas is enabled in Organisation settings.
+                </p>
+              )}
             </div>
             {structuredComponents.length > 0 && (
               <div className="grid gap-2">
@@ -264,7 +321,17 @@ export function CompensationTab({ employeeId }: { employeeId: string }) {
                     const component = components?.find((item) => item.id === line.salary_component_id);
                     const excluded = excludedIds.includes(line.salary_component_id);
                     const overridden = line.salary_component_id in overrideAmounts;
-                    const amount = overridden ? overrideAmounts[line.salary_component_id] : structureDefaultNaira(line);
+                    const requiredByFormula = activeFormulaDependencyIds.has(line.salary_component_id);
+                    const defaultAmount = structureDefaultNaira(line);
+                    const amount = overridden ? overrideAmounts[line.salary_component_id] : defaultAmount ?? 0;
+                    const serverCalculated = component?.calc_type === "formula"
+                      || Boolean(line.uses_formula)
+                      || (component ? isPercentCalc(component.calc_type) : false);
+                    const calculationLabel = component?.calc_type === "formula" || line.uses_formula
+                      ? component?.formula?.summary || line.formula?.summary || "Published formula · server-calculated"
+                      : component && isPercentCalc(component.calc_type)
+                        ? `${calcSummary(component)} · server-calculated`
+                        : "Structure default";
 
                     return (
                       <div key={line.salary_component_id} className="grid gap-2 rounded-md border bg-background p-3 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-center">
@@ -273,18 +340,41 @@ export function CompensationTab({ employeeId }: { employeeId: string }) {
                             {line.component_name || line.component_code}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {excluded ? "Excluded for this employee" : overridden ? "Employee override" : component?.calc_type === "percent_of_basic" ? `Structure default · ${line.percent ?? component.percent}% of basic` : "Structure default"}
+                            {excluded
+                              ? "Excluded for this employee"
+                              : overridden
+                                ? component?.calc_type === "formula" || line.uses_formula
+                                  ? "Employee override · replaces the published formula"
+                                  : "Employee override"
+                                : calculationLabel}
                           </p>
+                          {requiredByFormula && (
+                            <p className="mt-0.5 text-xs font-medium text-fruition-700 dark:text-fruition-300">
+                              Required by an active formula in this structure
+                            </p>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-muted-foreground">₦</span>
-                          <AmountInput
-                            value={amount}
+                        {!overridden && serverCalculated ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
                             disabled={excluded}
-                            onValueChange={(value) => setOverrideAmounts((current) => ({ ...current, [line.salary_component_id]: value }))}
-                            placeholder="0"
-                          />
-                        </div>
+                            onClick={() => setOverrideAmounts((current) => ({ ...current, [line.salary_component_id]: 0 }))}
+                          >
+                            Override amount
+                          </Button>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-muted-foreground">₦</span>
+                            <AmountInput
+                              value={amount}
+                              disabled={excluded}
+                              onValueChange={(value) => setOverrideAmounts((current) => ({ ...current, [line.salary_component_id]: value }))}
+                              placeholder="0"
+                            />
+                          </div>
+                        )}
                         <div className="flex items-center justify-end gap-1">
                           {overridden && !excluded && (
                             <Button type="button" size="icon-sm" variant="ghost" aria-label={`Reset ${line.component_name}`} onClick={() => setOverrideAmounts((current) => {
@@ -295,7 +385,18 @@ export function CompensationTab({ employeeId }: { employeeId: string }) {
                               <RotateCcw className="size-4" />
                             </Button>
                           )}
-                          <Button type="button" size="sm" variant={excluded ? "outline" : "ghost"} onClick={() => setExcludedIds((current) => excluded ? current.filter((id) => id !== line.salary_component_id) : [...current, line.salary_component_id])}>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={excluded ? "outline" : "ghost"}
+                            disabled={!excluded && requiredByFormula}
+                            title={!excluded && requiredByFormula
+                              ? "This component supplies an active formula and cannot be excluded"
+                              : undefined}
+                            onClick={() => setExcludedIds((current) => excluded
+                              ? current.filter((id) => id !== line.salary_component_id)
+                              : [...current, line.salary_component_id])}
+                          >
                             {excluded ? "Restore" : "Exclude"}
                           </Button>
                         </div>
@@ -356,7 +457,13 @@ export function CompensationTab({ employeeId }: { employeeId: string }) {
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
-              <Button onClick={submit} disabled={assign.isPending || basic <= 0}>
+              <Button
+                onClick={submit}
+                disabled={assign.isPending || basic <= 0 || (!advancedFormulasEnabled && selectedStructureUsesFormula)}
+                title={!advancedFormulasEnabled && selectedStructureUsesFormula
+                  ? "Enable advanced salary formulas before assigning this structure"
+                  : undefined}
+              >
                 {assign.isPending ? "Saving…" : "Save salary"}
               </Button>
             </div>

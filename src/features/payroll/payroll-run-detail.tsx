@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Download, FileText, Lock, RotateCcw, Scale, Search, Send } from "lucide-react";
+import { ArrowLeft, Download, FileText, Lock, RefreshCw, RotateCcw, Scale, Search, Send, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -25,6 +25,7 @@ import {
   payrollDownloadUrl,
   usePayrollAction,
   usePayrollRun,
+  useRetryPayrollCalculation,
   useReversePayrollRun,
 } from "@/features/payroll/use-payroll";
 import { VarianceSheet } from "@/features/payroll/variance-sheet";
@@ -54,6 +55,7 @@ function nextStep(status: string) {
 export function PayrollRunDetail({ runId }: { runId: number }) {
   const { data: run, isLoading, isError, isFetching, refetch } = usePayrollRun(runId);
   const action = usePayrollAction(runId);
+  const retryCalculation = useRetryPayrollCalculation(runId);
   const reverse = useReversePayrollRun(runId);
   const [lockOpen, setLockOpen] = useState(false);
   const [varianceOpen, setVarianceOpen] = useState(false);
@@ -108,6 +110,15 @@ export function PayrollRunDetail({ runId }: { runId: number }) {
       toast.error(apiErrorMessage(error));
     } finally {
       setLockOpen(false);
+    }
+  };
+
+  const doRetryCalculation = async () => {
+    try {
+      await retryCalculation.mutateAsync();
+      toast.success("Payroll calculation restarted.");
+    } catch (error) {
+      toast.error(apiErrorMessage(error));
     }
   };
 
@@ -172,6 +183,48 @@ export function PayrollRunDetail({ runId }: { runId: number }) {
       {run.status === "reversed" && (
         <div className="rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
           This run has been <strong>reversed</strong> and no longer contributes to payroll totals.
+        </div>
+      )}
+      {run.calculation_failure && (
+        <div
+          role="alert"
+          className="rounded-xl border border-destructive/35 bg-destructive/5 p-4 text-sm"
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-destructive/10 text-destructive">
+                <TriangleAlert className="size-5" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="font-semibold text-destructive">Payroll calculation stopped</h2>
+                <p className="mt-1 max-w-3xl leading-6 text-foreground">
+                  {run.calculation_failure.message
+                    || "Review the payroll inputs, correct the problem, and retry the calculation."}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {run.calculation_failure.code && (
+                    <><span className="font-mono">{run.calculation_failure.code}</span><span aria-hidden> · </span></>
+                  )}
+                  Failed {new Intl.DateTimeFormat("en-NG", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  }).format(new Date(run.calculation_failure.failed_at))}
+                </p>
+              </div>
+            </div>
+            <Can permission="payroll.process">
+              {run.calculation_failure.retryable && (
+                <Button
+                  type="button"
+                  onClick={() => void doRetryCalculation()}
+                  disabled={retryCalculation.isPending}
+                >
+                  <RefreshCw className={retryCalculation.isPending ? "size-4 animate-spin" : "size-4"} />
+                  {retryCalculation.isPending ? "Restarting…" : "Retry calculation"}
+                </Button>
+              )}
+            </Can>
+          </div>
         </div>
       )}
 

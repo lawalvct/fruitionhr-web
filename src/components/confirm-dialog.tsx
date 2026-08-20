@@ -4,7 +4,9 @@ import { Dialog } from "@base-ui/react/dialog";
 import type { ReactElement } from "react";
 
 import { Button } from "@/components/ui/button";
+import type { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { VariantProps } from "class-variance-authority";
 
 export function ConfirmDialog({
   open,
@@ -12,6 +14,7 @@ export function ConfirmDialog({
   title = "Are you sure?",
   description,
   confirmLabel = "Delete",
+  confirmVariant = "destructive",
   isPending = false,
   onConfirm,
   trigger,
@@ -21,6 +24,7 @@ export function ConfirmDialog({
   title?: string;
   description: string;
   confirmLabel?: string;
+  confirmVariant?: VariantProps<typeof buttonVariants>["variant"];
   isPending?: boolean;
   onConfirm: () => void;
   trigger?: ReactElement;
@@ -43,7 +47,7 @@ export function ConfirmDialog({
             <Dialog.Close render={<Button type="button" variant="outline" disabled={isPending} />}>
               Cancel
             </Dialog.Close>
-            <Button type="button" variant="destructive" disabled={isPending} onClick={onConfirm}>
+            <Button type="button" variant={confirmVariant} disabled={isPending} onClick={onConfirm}>
               {isPending ? "Working…" : confirmLabel}
             </Button>
           </div>

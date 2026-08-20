@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search, Settings2, WalletCards } from "lucide-react";
+import { Plus, Search, Settings2, TriangleAlert, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -13,7 +13,6 @@ import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NewRunDialog } from "@/features/payroll/new-run-dialog";
-import { SalarySetupDialog } from "@/features/payroll/salary-setup-dialog";
 import { usePayrollRuns } from "@/features/payroll/use-payroll";
 
 function periodLabel(period: string) {
@@ -34,7 +33,6 @@ function SummaryCard({ label, children, detail }: { label: string; children: Rea
 export function PayrollPage() {
   const { data: runs = [], isLoading, isError, isFetching, refetch } = usePayrollRuns();
   const [newOpen, setNewOpen] = useState(false);
-  const [setupOpen, setSetupOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const router = useRouter();
@@ -58,7 +56,7 @@ export function PayrollPage() {
         actions={
           <div className="flex flex-wrap gap-2">
             <Can permission="employees.view_salary">
-              <Button variant="outline" onClick={() => setSetupOpen(true)}>
+              <Button variant="outline" render={<Link href="/payroll/setup" />}>
                 <Settings2 className="size-4" /> Salary setup
               </Button>
             </Can>
@@ -124,7 +122,16 @@ export function PayrollPage() {
                 {filteredRuns.map((run) => (
                   <tr key={run.id} className="border-b last:border-0 hover:bg-muted/30">
                     <td className="px-4 py-3 font-medium">{periodLabel(run.period)}</td>
-                    <td className="px-4 py-3"><StatusBadge status={run.status} /></td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col items-start gap-1">
+                        <StatusBadge status={run.status} />
+                        {run.calculation_failure && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
+                            <TriangleAlert className="size-3.5" /> Calculation failed
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-right">{run.employee_count}</td>
                     <td className="px-4 py-3 text-right"><MoneyText kobo={run.total_gross} /></td>
                     <td className="px-4 py-3 text-right font-semibold text-fruition-700"><MoneyText kobo={run.total_net} /></td>
@@ -143,7 +150,6 @@ export function PayrollPage() {
         onOpenChange={setNewOpen}
         onCreated={(id) => router.push(`/payroll/${id}`)}
       />
-      <SalarySetupDialog open={setupOpen} onOpenChange={setSetupOpen} />
     </div>
   );
 }
