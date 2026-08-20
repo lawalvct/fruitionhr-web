@@ -1,10 +1,11 @@
 "use client";
 
-import { AlertTriangle, CalendarClock, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, Filter, Lock, Plus, QrCode, RotateCcw, Settings, Timer, Upload, UserX, Users } from "lucide-react";
+import { AlertTriangle, CalendarClock, CalendarDays, CheckCheck, CheckCircle2, ChevronLeft, ChevronRight, Clock, Filter, Lock, Plus, QrCode, RotateCcw, Settings, Timer, Upload, UserX, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Can } from "@/components/can";
+import { useCan } from "@/features/auth/use-auth";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { PageHeader } from "@/components/page-header";
 import { PageLoader } from "@/components/page-loader";
@@ -16,6 +17,8 @@ import {
   type DayStatusCode,
 } from "@/features/attendance/use-attendance";
 import { AttendanceSettingsDialog } from "@/features/attendance/attendance-settings-dialog";
+import { BulkMarkDialog } from "@/features/attendance/bulk-mark-dialog";
+import { DayCellDialog, type DayCellTarget } from "@/features/attendance/day-cell-dialog";
 import { ImportDialog } from "@/features/attendance/import-dialog";
 import { KiosksDialog } from "@/features/attendance/kiosks-dialog";
 import { RecordLogDialog } from "@/features/attendance/record-log-dialog";
@@ -61,6 +64,8 @@ export function AttendancePage() {
   const finalize = useFinalizePeriod(period);
 
   const [recordOpen, setRecordOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [cellTarget, setCellTarget] = useState<DayCellTarget | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [shiftsOpen, setShiftsOpen] = useState(false);
   const [kiosksOpen, setKiosksOpen] = useState(false);
@@ -70,6 +75,10 @@ export function AttendancePage() {
   const days = useMemo(() => daysInPeriod(period), [period]);
   const employees = grid?.rows.map((r) => r.employee) ?? [];
   const isFinalized = grid?.is_finalized ?? false;
+  const canManage = useCan("attendance.manage");
+  // A locked month is read-only, so cells stop being buttons entirely
+  // rather than opening a dialog that can only fail with a 409.
+  const canEditDays = canManage && !isFinalized;
   const departments = useMemo(() => Array.from(new Set((grid?.rows ?? []).map((row) => row.employee.department).filter((item): item is string => Boolean(item)))).sort(), [grid?.rows]);
   const visibleRows = useMemo(() => (grid?.rows ?? []).filter((row) => !department || row.employee.department === department), [department, grid?.rows]);
   const totals = useMemo(() => visibleRows.reduce((total, row) => ({
@@ -113,8 +122,11 @@ export function AttendancePage() {
               <Button variant="outline" onClick={() => setImportOpen(true)} disabled={isFinalized}>
                 <Upload className="size-4" /> Import
               </Button>
-              <Button onClick={() => setRecordOpen(true)} disabled={isFinalized}>
+              <Button onClick={() => setRecordOpen(true)} variant="outline" disabled={isFinalized}>
                 <Plus className="size-4" /> Record
+              </Button>
+              <Button onClick={() => setBulkOpen(true)} disabled={isFinalized}>
+                <CheckCheck className="size-4" /> Mark attendance
               </Button>
             </div>
           </Can>
@@ -198,17 +210,36 @@ export function AttendancePage() {
                   {days.map((d) => {
                     const day = row.days[d];
                     const meta = day ? STATUS_META[day.status] : null;
+                    const cell = meta && meta.short ? (
+                      <span
+                        className={`mx-auto flex size-5 items-center justify-center rounded text-[9px] font-bold text-white ${meta.color}`}
+                      >
+                        {meta.short}
+                      </span>
+                    ) : (
+                      <span className={`mx-auto block size-5 rounded ${meta?.color ?? ""}`} />
+                    );
+                    const title = `${meta?.label ?? "No record"}${day?.late_minutes ? ` · ${day.late_minutes}m late` : ""}`;
+
                     return (
                       <td key={d} className="px-0 py-1.5 text-center">
-                        {meta && meta.short ? (
-                          <span
-                            title={`${meta.label}${day!.late_minutes ? ` · ${day!.late_minutes}m late` : ""}`}
-                            className={`mx-auto flex size-5 items-center justify-center rounded text-[9px] font-bold text-white ${meta.color}`}
+                        {canEditDays ? (
+                          <button
+                            type="button"
+                            title={`${title} — click to edit`}
+                            aria-label={`${row.employee.name}, ${d}: ${meta?.label ?? "no record"}`}
+                            onClick={() => setCellTarget({
+                              employeeId: row.employee.id,
+                              employeeName: row.employee.name,
+                              date: d,
+                              day,
+                            })}
+                            className="mx-auto block rounded p-0.5 outline-none hover:ring-2 hover:ring-primary/40 focus-visible:ring-2 focus-visible:ring-primary"
                           >
-                            {meta.short}
-                          </span>
+                            {cell}
+                          </button>
                         ) : (
-                          <span className={`mx-auto block size-5 rounded ${meta?.color ?? ""}`} />
+                          <span title={title}>{cell}</span>
                         )}
                       </td>
                     );
@@ -228,7 +259,12 @@ export function AttendancePage() {
       )}
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+        {canEditDays && (
+          <span className="font-medium text-slate-600 dark:text-slate-300">
+            Click any day to edit it ·
+          </span>
+        )}
         {Object.entries(STATUS_META).map(([key, meta]) => (
           <span key={key} className="inline-flex items-center gap-1.5">
             <span className={`size-3 rounded ${meta.color}`} /> {meta.label}
@@ -236,6 +272,8 @@ export function AttendancePage() {
         ))}
       </div>
 
+      <BulkMarkDialog open={bulkOpen} onOpenChange={setBulkOpen} period={period} rows={visibleRows} />
+      <DayCellDialog target={cellTarget} onOpenChange={(open) => { if (!open) setCellTarget(null); }} period={period} />
       <RecordLogDialog open={recordOpen} onOpenChange={setRecordOpen} period={period} employees={employees} />
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} period={period} />
       <ShiftsDialog open={shiftsOpen} onOpenChange={setShiftsOpen} />

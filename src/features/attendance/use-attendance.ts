@@ -211,6 +211,72 @@ export function useRecordLog(period: string) {
   });
 }
 
+/** The three statuses a human can set. The rest are derived from other
+ * sources — leave from the Leave module, holidays from the calendar, weekend
+ * and no_shift from the shift config — so the API refuses them. */
+export const SETTABLE_STATUSES = ["present", "late", "absent"] as const;
+
+export type SettableStatus = (typeof SETTABLE_STATUSES)[number];
+
+export interface BulkMarkInput {
+  employee_ids: number[];
+  status: SettableStatus;
+  /** Either a single date… */
+  date?: string;
+  /** …or an inclusive range, which must stay inside one month. */
+  from?: string;
+  to?: string;
+  clock_in?: string;
+  clock_out?: string;
+  note?: string;
+  overwrite?: boolean;
+}
+
+export interface BulkMarkSkip {
+  employee_id: number;
+  employee: string;
+  date: string;
+  reason:
+    | "weekend"
+    | "holiday"
+    | "on_leave"
+    | "no_shift"
+    | "already_recorded"
+    | "already_absent";
+}
+
+export interface BulkMarkResult {
+  marked: number;
+  cleared: number;
+  skipped: BulkMarkSkip[];
+}
+
+/** Why a day was left alone, in words the person clicking will recognise. */
+export const SKIP_REASON_LABEL: Record<BulkMarkSkip["reason"], string> = {
+  weekend: "Rest day",
+  holiday: "Public holiday",
+  on_leave: "On approved leave",
+  no_shift: "No shift assigned",
+  already_recorded: "Already recorded",
+  already_absent: "Already absent",
+};
+
+export function useBulkMark(period: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: BulkMarkInput) => {
+      await ensureCsrf();
+      const { data } = await api.post<{ data: BulkMarkResult; message: string }>(
+        "/api/v1/attendance-logs/bulk",
+        input,
+      );
+      return { ...data.data, message: data.message };
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: attendanceKeys.grid(period) }),
+  });
+}
+
 export interface ImportResult {
   imported: number;
   skipped: number;

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
 import { api, ensureCsrf } from "@/lib/api";
-import type { LoginInput, Me, RegisterInput } from "@/types/auth";
+import type { LoginInput, Me, RegisterInput, ResetPasswordInput } from "@/types/auth";
 import { adminHomeDestination } from "@/features/admin/admin-access";
 import { tenantHomeDestination } from "./access-destinations";
 
@@ -94,6 +94,30 @@ export function useResendVerificationCode() {
     mutationFn: async () => {
       await ensureCsrf();
       await api.post("/api/v1/email/resend");
+    },
+  });
+}
+
+/**
+ * Request a reset link. Deliberately has no "unknown email" path: the API
+ * answers identically whether or not the address has an account, so the UI
+ * must not imply otherwise.
+ */
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: async (email: string) => {
+      await ensureCsrf();
+      const { data } = await api.post<{ message: string }>("/api/v1/forgot-password", { email });
+      return data.message;
+    },
+  });
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: async (input: ResetPasswordInput) => {
+      await ensureCsrf();
+      await api.post("/api/v1/reset-password", input);
     },
   });
 }
