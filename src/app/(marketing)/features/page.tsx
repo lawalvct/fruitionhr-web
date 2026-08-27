@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -8,7 +9,6 @@ import {
   Building2,
   CalendarCheck2,
   CalendarDays,
-  Check,
   CheckCircle2,
   ClipboardCheck,
   Clock4,
@@ -381,73 +381,18 @@ export default function FeaturesPage() {
             </div>
           </div>
 
-          <div
-            className="relative mx-auto w-full max-w-2xl"
-            aria-label="Illustration of connected payroll inputs in FruitionHR"
-          >
+          <div className="relative mx-auto w-full max-w-2xl">
             <div className="absolute -inset-5 rounded-[2.5rem] bg-fruition-200/35 blur-3xl" />
-            <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-linear-135 from-fruition-950 via-fruition-900 to-fruition-800 p-3 shadow-[0_32px_80px_rgba(6,78,59,0.28)] sm:p-5">
-              <div className="rounded-2xl bg-white p-4 shadow-2xl sm:p-6">
-                <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5">
-                  <div>
-                    <p className="text-xs font-semibold tracking-wider text-fruition-700 uppercase">
-                      Payroll readiness
-                    </p>
-                    <h2 className="mt-1 text-lg font-bold text-slate-900 sm:text-xl">
-                      August payroll
-                    </h2>
-                  </div>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-fruition-50 px-3 py-1.5 text-xs font-semibold text-fruition-800 ring-1 ring-fruition-100">
-                    <CheckCircle2 className="size-3.5" /> Ready to review
-                  </span>
-                </div>
-
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {[
-                    ["Employee salaries", "Configured"],
-                    ["Attendance", "Finalized"],
-                    ["Leave requests", "Resolved"],
-                    ["Loan recoveries", "Scheduled"],
-                  ].map(([label, status]) => (
-                    <div
-                      key={label}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/70 px-3.5 py-3"
-                    >
-                      <span className="text-xs font-medium text-slate-600">{label}</span>
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-fruition-700">
-                        <Check className="size-3" /> {status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-5 rounded-2xl bg-fruition-950 p-5 text-white">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-xs text-fruition-100/60">Connected inputs</p>
-                      <p className="mt-1 text-base font-bold">All checks complete</p>
-                    </div>
-                    <span className="grid size-11 place-items-center rounded-xl bg-fruition-400/15 text-fruition-300 ring-1 ring-fruition-300/20">
-                      <ShieldCheck className="size-5" />
-                    </span>
-                  </div>
-                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-                    <div className="h-full w-full rounded-full bg-linear-to-r from-fruition-400 to-emerald-300" />
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {["Payslips", "Bank schedule", "PAYE", "Pension", "NHF", "NSITF"].map(
-                      (output) => (
-                        <span
-                          key={output}
-                          className="rounded-lg bg-white/8 px-2.5 py-1.5 text-[10px] font-medium text-fruition-50 ring-1 ring-white/10"
-                        >
-                          {output}
-                        </span>
-                      ),
-                    )}
-                  </div>
-                </div>
-              </div>
+            <div className="relative overflow-hidden rounded-[1.75rem] border border-fruition-100 bg-white p-2 shadow-[0_32px_80px_rgba(6,78,59,0.22)] sm:p-3">
+              <Image
+                src="/features-image.jpeg"
+                alt="FruitionHR dashboard showing employees, attendance, approvals, payroll, and performance insights"
+                width={1369}
+                height={916}
+                priority
+                sizes="(min-width: 1024px) 52vw, 100vw"
+                className="h-auto w-full rounded-[1.25rem]"
+              />
             </div>
           </div>
         </div>
