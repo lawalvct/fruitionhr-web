@@ -72,6 +72,17 @@ export interface PlansResponse {
   meta: { employees: number; gateways: PaymentMethod[]; currency: string };
 }
 
+/**
+ * Minimal standing, readable by every user — drives the read-only banner.
+ * The full SubscriptionResponse needs the billing.view permission.
+ */
+export interface SubscriptionStanding {
+  status: SubscriptionStatus;
+  on_trial: boolean;
+  is_usable: boolean;
+  trial_ends_at: string | null;
+}
+
 export interface SubscriptionResponse {
   data: BillingSubscription | null;
   meta: {

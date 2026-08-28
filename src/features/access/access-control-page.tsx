@@ -65,67 +65,139 @@ function MetricCard({
   );
 }
 
+/**
+ * The catalogue is ~60 permissions across 17 groups, so the two things that
+ * make it workable are a search box and a per-group toggle. Descriptions come
+ * from the API catalogue: whoever is building a role needs to know that kiosk
+ * access hands out a QR token, not just that the permission is called "Manage
+ * attendance kiosks".
+ */
 function PermissionChecklist({
   groups,
   selected,
   onToggle,
+  onToggleMany,
   disabled = false,
   idPrefix,
 }: {
   groups: PermissionGroup[];
   selected: string[];
   onToggle: (permission: string) => void;
+  onToggleMany: (permissions: string[], next: boolean) => void;
   disabled?: boolean;
   idPrefix: string;
 }) {
   const selectedSet = useMemo(() => new Set(selected), [selected]);
+  const [search, setSearch] = useState("");
+
+  const visibleGroups = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return groups;
+
+    return groups
+      .map((group) => ({
+        ...group,
+        permissions: group.permissions.filter((permission) =>
+          [group.label, permission.label, permission.name, permission.description]
+            .filter(Boolean)
+            .some((value) => value!.toLowerCase().includes(term)),
+        ),
+      }))
+      .filter((group) => group.permissions.length > 0);
+  }, [groups, search]);
 
   return (
-    <div className="grid gap-3 xl:grid-cols-2">
-      {groups.map((group) => {
-        const enabledCount = group.permissions.filter((permission) => selectedSet.has(permission.name)).length;
+    <div className="space-y-3">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search permissions — try 'bulk', 'salary' or 'kiosk'"
+          className="pl-9"
+          aria-label="Search permissions"
+        />
+      </div>
 
-        return (
-          <fieldset key={group.module} className="rounded-xl border border-border bg-background p-3.5">
-            <legend className="sr-only">{group.label}</legend>
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="font-heading text-sm font-semibold">{group.label}</p>
-              <span className="text-xs text-muted-foreground">
-                {enabledCount}/{group.permissions.length}
-              </span>
-            </div>
-            <div className="space-y-1.5">
-              {group.permissions.map((permission) => {
-                const checked = selectedSet.has(permission.name);
-                const inputId = `${idPrefix}-${permission.name.replaceAll(".", "-")}`;
+      {visibleGroups.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
+          No permission matches &ldquo;{search}&rdquo;.
+        </p>
+      ) : (
+        <div className="grid gap-3 xl:grid-cols-2">
+          {visibleGroups.map((group) => {
+            const names = group.permissions.map((permission) => permission.name);
+            const enabledCount = names.filter((name) => selectedSet.has(name)).length;
+            const allEnabled = enabledCount === names.length;
 
-                return (
-                  <label
-                    key={permission.name}
-                    htmlFor={inputId}
-                    className={cn(
-                      "flex min-h-9 cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
-                      checked ? "bg-fruition-50 text-fruition-900" : "hover:bg-muted/70",
-                      disabled && "cursor-default opacity-75",
+            return (
+              <fieldset key={group.module} className="rounded-xl border border-border bg-background p-3.5">
+                <legend className="sr-only">{group.label}</legend>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="font-heading text-sm font-semibold">{group.label}</p>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      {enabledCount}/{names.length}
+                    </span>
+                    {!disabled && (
+                      <button
+                        type="button"
+                        onClick={() => onToggleMany(names, !allEnabled)}
+                        className="text-xs font-medium text-fruition-700 underline-offset-2 hover:underline"
+                      >
+                        {allEnabled ? "Clear" : "Select all"}
+                      </button>
                     )}
-                  >
-                    <input
-                      id={inputId}
-                      type="checkbox"
-                      checked={checked}
-                      disabled={disabled}
-                      onChange={() => onToggle(permission.name)}
-                      className="size-4 rounded border-border accent-fruition-700"
-                    />
-                    <span className="min-w-0 flex-1">{permission.label}</span>
-                    {checked && <Check className="size-3.5 shrink-0 text-fruition-700" />}
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-        );
-      })}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  {group.permissions.map((permission) => {
+                    const checked = selectedSet.has(permission.name);
+                    const inputId = `${idPrefix}-${permission.name.replaceAll(".", "-")}`;
+
+                    return (
+                      <label
+                        key={permission.name}
+                        htmlFor={inputId}
+                        className={cn(
+                          "flex cursor-pointer gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
+                          checked ? "bg-fruition-50 text-fruition-900" : "hover:bg-muted/70",
+                          disabled && "cursor-default opacity-75",
+                        )}
+                      >
+                        <input
+                          id={inputId}
+                          type="checkbox"
+                          checked={checked}
+                          disabled={disabled}
+                          onChange={() => onToggle(permission.name)}
+                          className="mt-0.5 size-4 shrink-0 rounded border-border accent-fruition-700"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-start gap-2">
+                            <span className="min-w-0 flex-1 font-medium">{permission.label}</span>
+                            {checked && <Check className="mt-0.5 size-3.5 shrink-0 text-fruition-700" />}
+                          </span>
+                          {permission.description && (
+                            <span
+                              className={cn(
+                                "mt-0.5 block text-xs leading-5",
+                                checked ? "text-fruition-800/80" : "text-muted-foreground",
+                              )}
+                            >
+                              {permission.description}
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -148,6 +220,14 @@ function NewRoleDialog({
   const toggle = (permission: string) => {
     setPermissions((current) =>
       current.includes(permission) ? current.filter((item) => item !== permission) : [...current, permission],
+    );
+  };
+
+  const toggleMany = (names: string[], next: boolean) => {
+    setPermissions((current) =>
+      next
+        ? [...new Set([...current, ...names])]
+        : current.filter((item) => !names.includes(item)),
     );
   };
 
@@ -200,6 +280,7 @@ function NewRoleDialog({
             groups={groups}
             selected={permissions}
             onToggle={toggle}
+            onToggleMany={toggleMany}
             idPrefix="new-role"
           />
         </div>
@@ -334,6 +415,14 @@ function RoleEditor({
     );
   };
 
+  const togglePermissions = (names: string[], next: boolean) => {
+    setPermissions((current) =>
+      next
+        ? [...new Set([...current, ...names])]
+        : current.filter((item) => !names.includes(item)),
+    );
+  };
+
   const save = async () => {
     if (!name.trim()) {
       toast.error("Enter a role name.");
@@ -402,6 +491,7 @@ function RoleEditor({
           groups={groups}
           selected={permissions}
           onToggle={togglePermission}
+          onToggleMany={togglePermissions}
           disabled={role.is_owner}
           idPrefix={`edit-role-${role.id}`}
         />

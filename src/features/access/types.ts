@@ -1,6 +1,8 @@
 export interface AccessPermission {
   name: string;
   label: string;
+  /** One line on what the permission actually unlocks. Null if uncatalogued. */
+  description: string | null;
   action: string;
 }
 

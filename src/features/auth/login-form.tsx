@@ -10,6 +10,7 @@ import { authDestination, useLogin } from "@/features/auth/use-auth";
 import { apiErrorMessage, isValidationError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 
 const schema = z.object({
@@ -78,9 +79,8 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
             Forgot password?
           </Link>
         </div>
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
           autoComplete="current-password"
           {...register("password")}
         />

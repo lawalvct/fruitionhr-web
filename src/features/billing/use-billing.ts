@@ -2,12 +2,14 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { useCan } from "@/features/auth/use-auth";
 import { api, ensureCsrf } from "@/lib/api";
 import type {
   BillingPayment,
   BillingSubscription,
   PlansResponse,
   SubscriptionResponse,
+  SubscriptionStanding,
 } from "./types";
 
 const BILLING_API = "/api/v1/billing";
@@ -17,35 +19,61 @@ export const billingKeys = {
   plans: ["billing", "plans"] as const,
   subscription: ["billing", "subscription"] as const,
   payments: ["billing", "payments"] as const,
+  status: ["billing", "status"] as const,
 };
 
 export function useBillingPlans() {
+  const canView = useCan("billing.view");
+
   return useQuery({
     queryKey: billingKeys.plans,
     queryFn: async () => {
       const { data } = await api.get<PlansResponse>(`${BILLING_API}/plans`);
       return data;
     },
+    enabled: canView,
   });
 }
 
 export function useSubscription() {
+  // The sidebar pill renders on every page for every user; without this the
+  // majority of logins would fire a 403 on each navigation.
+  const canView = useCan("billing.view");
+
   return useQuery({
     queryKey: billingKeys.subscription,
     queryFn: async () => {
       const { data } = await api.get<SubscriptionResponse>(`${BILLING_API}/subscription`);
       return data;
     },
+    enabled: canView,
+  });
+}
+
+/**
+ * Ungated counterpart to useSubscription: every user may ask whether the
+ * workspace is writable, so the read-only banner works for all of them.
+ */
+export function useSubscriptionStatus() {
+  return useQuery({
+    queryKey: billingKeys.status,
+    queryFn: async () => {
+      const { data } = await api.get<{ data: SubscriptionStanding | null }>(`${BILLING_API}/status`);
+      return data.data;
+    },
   });
 }
 
 export function useBillingPayments() {
+  const canView = useCan("billing.view");
+
   return useQuery({
     queryKey: billingKeys.payments,
     queryFn: async () => {
       const { data } = await api.get<{ data: BillingPayment[] }>(`${BILLING_API}/payments`);
       return data.data;
     },
+    enabled: canView,
   });
 }
 

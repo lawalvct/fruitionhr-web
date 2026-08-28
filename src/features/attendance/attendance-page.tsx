@@ -108,28 +108,40 @@ export function AttendancePage() {
         title="Attendance"
         description="Track daily attendance, then finalize the month for payroll."
         actions={
-          <Can permission="attendance.manage">
-            <div className="flex flex-wrap gap-2">
+          /* Each action carries its own permission now that attendance.manage
+             no longer implies shifts, kiosks, settings, import or bulk marking. */
+          <div className="flex flex-wrap gap-2">
+            <Can permission="attendance.shifts.manage">
               <Button variant="outline" onClick={() => setShiftsOpen(true)}>
                 <Clock className="size-4" /> Shifts
               </Button>
+            </Can>
+            <Can permission="attendance.kiosks.manage">
               <Button variant="outline" onClick={() => setKiosksOpen(true)}>
                 <QrCode className="size-4" /> Kiosks
               </Button>
+            </Can>
+            <Can permission="attendance.settings.manage">
               <Button variant="outline" onClick={() => setSettingsOpen(true)}>
                 <Settings className="size-4" /> Settings
               </Button>
+            </Can>
+            <Can permission="attendance.import">
               <Button variant="outline" onClick={() => setImportOpen(true)} disabled={isFinalized}>
                 <Upload className="size-4" /> Import
               </Button>
+            </Can>
+            <Can permission="attendance.manage">
               <Button onClick={() => setRecordOpen(true)} variant="outline" disabled={isFinalized}>
                 <Plus className="size-4" /> Record
               </Button>
+            </Can>
+            <Can permission="attendance.bulk_mark">
               <Button onClick={() => setBulkOpen(true)} disabled={isFinalized}>
                 <CheckCheck className="size-4" /> Mark attendance
               </Button>
-            </div>
-          </Can>
+            </Can>
+          </div>
         }
       />
 

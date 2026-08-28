@@ -5,7 +5,7 @@ import { Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useSubscription } from "./use-billing";
+import { useSubscriptionStatus } from "./use-billing";
 
 /**
  * Full-width notice for the one case that actually blocks work: the workspace
@@ -15,9 +15,10 @@ import { useSubscription } from "./use-billing";
  * in the sidebar pill instead, so ordinary days are not spent under a banner.
  */
 export function SubscriptionBanner() {
-  const { data } = useSubscription();
+  // Reads the ungated status endpoint, not the full subscription: a user
+  // without billing.view still has to be told why their saves are failing.
+  const { data: subscription } = useSubscriptionStatus();
 
-  const subscription = data?.data;
   if (!subscription) return null;
 
   // Locked out of writing — the most urgent case.

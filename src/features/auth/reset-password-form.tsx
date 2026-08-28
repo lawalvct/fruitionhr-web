@@ -10,7 +10,7 @@ import { z } from "zod";
 import { useResetPassword } from "@/features/auth/use-auth";
 import { apiErrorMessage, isValidationError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 
 const schema = z
@@ -113,9 +113,8 @@ export function ResetPasswordForm() {
       </p>
       <div className="grid gap-2">
         <Label htmlFor="password">New password</Label>
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
           autoComplete="new-password"
           autoFocus
           {...register("password")}
@@ -126,9 +125,8 @@ export function ResetPasswordForm() {
       </div>
       <div className="grid gap-2">
         <Label htmlFor="password_confirmation">Confirm new password</Label>
-        <Input
+        <PasswordInput
           id="password_confirmation"
-          type="password"
           autoComplete="new-password"
           {...register("password_confirmation")}
         />

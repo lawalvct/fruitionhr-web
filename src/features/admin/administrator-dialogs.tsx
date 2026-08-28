@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { FormDialog } from "@/components/form-dialog";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { mapLaravelErrorsToForm } from "@/lib/forms";
 import type { PlatformAdministrator } from "./types";
@@ -68,12 +69,24 @@ function Field<TValues extends CreateValues | EditValues>({
   return (
     <div className="space-y-1.5">
       <Label htmlFor={`administrator-${name}`}>{label}</Label>
-      <Input
-        id={`administrator-${name}`}
-        type={type}
-        autoComplete={autoComplete}
-        {...register(name)}
-      />
+      {/*
+        Password fields get the show/hide toggle — the admin is typing a
+        temporary password they then read back and share, so seeing it matters.
+      */}
+      {type === "password" ? (
+        <PasswordInput
+          id={`administrator-${name}`}
+          autoComplete={autoComplete}
+          {...register(name)}
+        />
+      ) : (
+        <Input
+          id={`administrator-${name}`}
+          type={type}
+          autoComplete={autoComplete}
+          {...register(name)}
+        />
+      )}
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   );

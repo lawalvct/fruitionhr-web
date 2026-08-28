@@ -28,6 +28,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 
 const fieldClass =
@@ -304,9 +305,8 @@ function PasswordCard() {
           )}
           <div className="grid gap-2">
             <Label htmlFor="current_password">Current password</Label>
-            <Input
+            <PasswordInput
               id="current_password"
-              type="password"
               autoComplete="current-password"
               {...register("current_password")}
             />
@@ -316,9 +316,8 @@ function PasswordCard() {
           </div>
           <div className="grid gap-2">
             <Label htmlFor="password">New password</Label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               autoComplete="new-password"
               placeholder="At least 8 characters"
               {...register("password")}
@@ -329,9 +328,8 @@ function PasswordCard() {
           </div>
           <div className="grid gap-2">
             <Label htmlFor="password_confirmation">Confirm new password</Label>
-            <Input
+            <PasswordInput
               id="password_confirmation"
-              type="password"
               autoComplete="new-password"
               {...register("password_confirmation")}
             />
