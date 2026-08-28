@@ -1,14 +1,41 @@
 /**
- * Marketing-site config. The app URL is env-driven so the site can deploy to
- * Vercel before the tenant app is live (set NEXT_PUBLIC_APP_URL there later).
+ * Marketing-site config. Both cross-surface URLs are env-driven so each
+ * deployment can point them wherever it needs.
+ *
+ * The fallbacks are per-environment on purpose. `NEXT_PUBLIC_*` values are
+ * inlined at build time, so a production build that forgets to set them used
+ * to bake `http://localhost:3000` into every cross-surface link — dead links
+ * to terms, privacy, blog posts and public vacancies on the live site. A
+ * production build now degrades to the real domains instead of localhost.
  */
+const isProduction = process.env.NODE_ENV === "production";
+
+/**
+ * An unset `NEXT_PUBLIC_*` var and one set to "" are very different to `??`:
+ * an empty string is a value, so `?? fallback` keeps it and every link becomes
+ * a bare "/terms" against the wrong host. Blank counts as unset here. The
+ * trailing slash is trimmed so a configured "https://fruitionhr.com/" cannot
+ * produce "//terms".
+ */
+function baseUrl(value: string | undefined, fallback: string): string {
+  const trimmed = value?.trim().replace(/\/+$/, "");
+
+  return trimmed ? trimmed : fallback;
+}
+
 export const site = {
   name: "FruitionHR",
   tagline: "Empowering Your Workforce",
   description:
     "All-in-one HR & payroll platform for growing African businesses — employees, attendance, leave, payroll with PAYE/Pension/NHF/NSITF compliance, recruitment and performance in one system.",
-  appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://app.fruitionhr.test:3000",
-  marketingUrl: process.env.NEXT_PUBLIC_MARKETING_URL ?? "http://localhost:3000",
+  appUrl: baseUrl(
+    process.env.NEXT_PUBLIC_APP_URL,
+    isProduction ? "https://app.fruitionhr.com" : "http://app.localhost:3000",
+  ),
+  marketingUrl: baseUrl(
+    process.env.NEXT_PUBLIC_MARKETING_URL,
+    isProduction ? "https://fruitionhr.com" : "http://localhost:3000",
+  ),
   contactEmail: "hello@fruitionhr.com",
 } as const;
 
