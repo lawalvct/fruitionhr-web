@@ -17,6 +17,16 @@ export const appLink = {
   login: `${site.appUrl}/login`,
 } as const;
 
+/**
+ * Legal pages live on the marketing site, but are linked from the app surface
+ * too (registration consent). Absolute for the same reason as
+ * `publicBlogUrl` below — a bare `/terms` would resolve against app.* .
+ */
+export const legalLink = {
+  terms: `${site.marketingUrl}/terms`,
+  privacy: `${site.marketingUrl}/privacy`,
+} as const;
+
 export function publicVacancyUrl(slug: string): string {
   return `${site.marketingUrl}/careers/${slug}`;
 }

@@ -83,7 +83,14 @@ export function SiteFooter() {
       <div className="border-t border-fruition-100">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-5 text-xs text-slate-400 sm:flex-row sm:px-6">
           <p>© {new Date().getFullYear()} FruitionHR. All rights reserved.</p>
-          <p>Built for Nigerian &amp; African payroll compliance.</p>
+          <nav className="flex items-center gap-4">
+            <Link href="/terms" className="hover:text-fruition-700">
+              Terms of Service
+            </Link>
+            <Link href="/privacy" className="hover:text-fruition-700">
+              Privacy Policy
+            </Link>
+          </nav>
         </div>
       </div>
     </footer>

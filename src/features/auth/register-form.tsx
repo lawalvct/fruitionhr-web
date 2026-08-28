@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { authDestination, useRegister } from "@/features/auth/use-auth";
 import { mapLaravelErrorsToForm } from "@/lib/forms";
+import { legalLink } from "@/lib/site";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,9 @@ const schema = z
     phone: z.string().optional(),
     password: z.string().min(8, "At least 8 characters"),
     password_confirmation: z.string(),
+    accept_terms: z.boolean().refine((v) => v === true, {
+      message: "Please accept the Terms of Service and Privacy Policy",
+    }),
   })
   .refine((v) => v.password === v.password_confirmation, {
     message: "Passwords do not match",
@@ -45,11 +49,22 @@ export function RegisterForm() {
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) });
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { accept_terms: false },
+  });
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      const me = await registerTenant.mutateAsync(values);
+      // accept_terms is a client-side gate only; the API has no field for it.
+      const me = await registerTenant.mutateAsync({
+        company_name: values.company_name,
+        name: values.name,
+        email: values.email,
+        phone: values.phone,
+        password: values.password,
+        password_confirmation: values.password_confirmation,
+      });
       router.replace(authDestination(me));
     } catch (error) {
       mapLaravelErrorsToForm(error, setError, fieldNames);
@@ -134,6 +149,46 @@ export function RegisterForm() {
         {errors.password_confirmation && (
           <p className="text-sm text-destructive">
             {errors.password_confirmation.message}
+          </p>
+        )}
+      </div>
+      <div className="grid gap-2">
+        <label
+          htmlFor="accept_terms"
+          className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-3 text-sm leading-6 text-slate-700"
+        >
+          <input
+            id="accept_terms"
+            type="checkbox"
+            className="mt-1 size-4 shrink-0 accent-fruition-700"
+            aria-invalid={Boolean(errors.accept_terms)}
+            {...register("accept_terms")}
+          />
+          <span>
+            I have read and agree to the{" "}
+            <a
+              href={legalLink.terms}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-fruition-700 underline underline-offset-4"
+            >
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a
+              href={legalLink.privacy}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-fruition-700 underline underline-offset-4"
+            >
+              Privacy Policy
+            </a>
+            .
+          </span>
+        </label>
+        {errors.accept_terms && (
+          <p className="text-sm text-destructive">
+            {errors.accept_terms.message}
           </p>
         )}
       </div>
