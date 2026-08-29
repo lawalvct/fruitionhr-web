@@ -752,7 +752,7 @@ export function OrganisationPage() {
       />
 
       <div className="grid gap-5 lg:grid-cols-[248px_minmax(0,1fr)] lg:items-start">
-        <nav aria-label="Settings sections" className="lg:sticky lg:top-20">
+        <nav aria-label="Settings sections">
           {/* Compact scroller on small screens */}
           <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:hidden">
             {tabs.map((tab) => (
