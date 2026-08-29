@@ -2,7 +2,19 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Edit, Plus, Trash2 } from "lucide-react";
+import {
+  BriefcaseBusiness,
+  Building2,
+  CalendarDays,
+  Edit,
+  IdCard,
+  Layers,
+  Network,
+  Plus,
+  Settings2,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
 import {
@@ -23,11 +35,20 @@ import { MoneyText } from "@/components/money-text";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OnboardingPreferences } from "@/features/onboarding/onboarding-preferences";
 import { PayrollSettingsCard } from "@/features/payroll/payroll-settings-card";
 import { mapLaravelErrorsToForm, nullableNumber } from "@/lib/forms";
+import { cn } from "@/lib/utils";
 import type {
   Branch,
   CompanyResource,
@@ -45,15 +66,17 @@ import {
   useUpdateCompanyResource,
 } from "@/features/company/use-company";
 
+const tabGroups = ["Company structure", "Work setup", "Workspace"] as const;
+
 const tabs = [
-  { id: "branches", label: "Branches" },
-  { id: "departments", label: "Departments" },
-  { id: "positions", label: "Positions" },
-  { id: "grades", label: "Grades" },
-  { id: "employment-types", label: "Employment types" },
-  { id: "holidays", label: "Holidays" },
-  { id: "preferences", label: "Preferences" },
-  { id: "features", label: "Features" },
+  { id: "branches", label: "Branches", hint: "Offices and work sites", group: "Company structure", icon: Building2 },
+  { id: "departments", label: "Departments", hint: "Teams and reporting lines", group: "Company structure", icon: Network },
+  { id: "positions", label: "Positions", hint: "Job titles per department", group: "Company structure", icon: BriefcaseBusiness },
+  { id: "grades", label: "Job grades", hint: "Levels and salary bands", group: "Company structure", icon: Layers },
+  { id: "employment-types", label: "Employment types", hint: "Full-time, contract, intern", group: "Work setup", icon: IdCard },
+  { id: "holidays", label: "Holidays", hint: "Public holiday calendars", group: "Work setup", icon: CalendarDays },
+  { id: "preferences", label: "Preferences", hint: "Company profile and defaults", group: "Workspace", icon: Settings2 },
+  { id: "features", label: "Features", hint: "Optional payroll modules", group: "Workspace", icon: Sparkles },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -512,7 +535,9 @@ function HolidayForm({
 
 function ResourceSection<TRecord extends CompanyResource, TInput>({
   title,
+  description,
   addLabel,
+  emptyText,
   endpoint,
   queryKey,
   columns,
@@ -520,7 +545,9 @@ function ResourceSection<TRecord extends CompanyResource, TInput>({
   getDeleteLabel,
 }: {
   title: string;
+  description: string;
   addLabel: string;
+  emptyText: string;
   endpoint: string;
   queryKey: readonly unknown[];
   columns: (helpers: {
@@ -557,24 +584,35 @@ function ResourceSection<TRecord extends CompanyResource, TInput>({
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <section className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="font-heading text-lg font-semibold">{title}</h2>
-        <Can permission="company.manage">
-          <Button
-            type="button"
-            onClick={() => {
-              setEditing(null);
-              setOpen(true);
-            }}
-          >
-            <Plus className="size-4" />
-            {addLabel}
-          </Button>
-        </Can>
-      </div>
-
-      <DataTable<TRecord> columns={tableColumns} endpoint={endpoint} queryKey={queryKey} />
+    <>
+      <Card>
+        <CardHeader className="border-b">
+          <CardTitle className="text-lg">{title}</CardTitle>
+          <CardDescription className="text-xs">{description}</CardDescription>
+          <Can permission="company.manage">
+            <CardAction>
+              <Button
+                type="button"
+                onClick={() => {
+                  setEditing(null);
+                  setOpen(true);
+                }}
+              >
+                <Plus className="size-4" />
+                {addLabel}
+              </Button>
+            </CardAction>
+          </Can>
+        </CardHeader>
+        <CardContent>
+          <DataTable<TRecord>
+            columns={tableColumns}
+            endpoint={endpoint}
+            queryKey={queryKey}
+            emptyText={emptyText}
+          />
+        </CardContent>
+      </Card>
 
       <FormDialog
         open={open}
@@ -609,7 +647,7 @@ function ResourceSection<TRecord extends CompanyResource, TInput>({
           setDeleting(null);
         }}
       />
-    </section>
+    </>
   );
 }
 
@@ -621,6 +659,13 @@ export function OrganisationPage() {
     ? requestedTab as TabId
     : "branches";
   const options = useCompanyOptions();
+
+  function selectTab(id: TabId) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", id);
+    router.replace(`/settings/organisation?${params.toString()}`, { scroll: false });
+  }
+
   const branches = options.branches.data ?? [];
   const departments = options.departments.data ?? [];
   const jobGrades = options.jobGrades.data ?? [];
@@ -706,105 +751,165 @@ export function OrganisationPage() {
         description="Manage company structure, work defaults, and the master data used across employee records, attendance, leave, and payroll."
       />
 
-      <div className="flex gap-1 overflow-x-auto border-b">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => {
-              const params = new URLSearchParams(searchParams.toString());
-              params.set("tab", tab.id);
-              router.replace(`/settings/organisation?${params.toString()}`);
-            }}
-            className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium ${
-              activeTab === tab.id
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="grid gap-5 lg:grid-cols-[248px_minmax(0,1fr)] lg:items-start">
+        <nav aria-label="Settings sections" className="lg:sticky lg:top-20">
+          {/* Compact scroller on small screens */}
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:hidden">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                aria-current={activeTab === tab.id ? "page" : undefined}
+                onClick={() => selectTab(tab.id)}
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-3 py-2 text-sm font-medium transition-colors",
+                  activeTab === tab.id
+                    ? "border-fruition-300 bg-fruition-50 text-fruition-900"
+                    : "border-border bg-card text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <tab.icon className="size-4" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Grouped rail on desktop */}
+          <div className="hidden space-y-5 lg:block">
+            {tabGroups.map((group) => (
+              <div key={group}>
+                <p className="px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{group}</p>
+                <div className="mt-2 space-y-1">
+                  {tabs
+                    .filter((tab) => tab.group === group)
+                    .map((tab) => {
+                      const isActive = activeTab === tab.id;
+
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          aria-current={isActive ? "page" : undefined}
+                          onClick={() => selectTab(tab.id)}
+                          className={cn(
+                            "flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors",
+                            isActive
+                              ? "border-fruition-300 bg-fruition-50/70"
+                              : "border-transparent hover:bg-muted/60",
+                          )}
+                        >
+                          <tab.icon
+                            className={cn(
+                              "mt-0.5 size-4 shrink-0",
+                              isActive ? "text-fruition-700" : "text-muted-foreground",
+                            )}
+                          />
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-medium">{tab.label}</span>
+                            <span className="block truncate text-xs text-muted-foreground">{tab.hint}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </nav>
+
+        <div className="min-w-0 space-y-6">
+          {activeTab === "branches" && (
+            <ResourceSection<Branch, BranchFormValues>
+              title="Branches"
+              description="Physical offices and sites employees are assigned to."
+              emptyText="No branches yet. Add your first office or site."
+              addLabel="Add branch"
+              endpoint="/api/v1/branches"
+              queryKey={companyKeys.branches}
+              columns={branchColumns}
+              getDeleteLabel={(record) => record.name}
+              renderForm={({ formId, record, onSubmit }) => <BranchForm formId={formId} record={record} onSubmit={onSubmit} />}
+            />
+          )}
+
+          {activeTab === "departments" && (
+            <ResourceSection<Department, DepartmentFormValues>
+              title="Departments"
+              description="Teams inside the company. A department can sit under a parent department."
+              emptyText="No departments yet. Add one to group your teams."
+              addLabel="Add department"
+              endpoint="/api/v1/departments"
+              queryKey={companyKeys.departments}
+              columns={departmentColumns}
+              getDeleteLabel={(record) => record.name}
+              renderForm={({ formId, record, onSubmit }) => (
+                <DepartmentForm formId={formId} record={record} branches={branches} departments={departments} onSubmit={onSubmit} />
+              )}
+            />
+          )}
+
+          {activeTab === "positions" && (
+            <ResourceSection<Position, PositionFormValues>
+              title="Positions"
+              description="Job titles employees hold, each tied to a department and grade."
+              emptyText="No positions yet. Add the job titles your teams hire for."
+              addLabel="Add position"
+              endpoint="/api/v1/positions"
+              queryKey={companyKeys.positions}
+              columns={positionColumns}
+              getDeleteLabel={(record) => record.title}
+              renderForm={({ formId, record, onSubmit }) => (
+                <PositionForm formId={formId} record={record} departments={departments} jobGrades={jobGrades} onSubmit={onSubmit} />
+              )}
+            />
+          )}
+
+          {activeTab === "grades" && (
+            <ResourceSection<JobGrade, GradeFormValues>
+              title="Job grades"
+              description="Levels and salary bands used to place positions on a pay scale."
+              emptyText="No job grades yet. Add a grade to define a salary band."
+              addLabel="Add grade"
+              endpoint="/api/v1/job-grades"
+              queryKey={companyKeys.jobGrades}
+              columns={gradeColumns}
+              getDeleteLabel={(record) => record.name}
+              renderForm={({ formId, record, onSubmit }) => <GradeForm formId={formId} record={record} onSubmit={onSubmit} />}
+            />
+          )}
+
+          {activeTab === "employment-types" && (
+            <ResourceSection<EmploymentType, EmploymentTypeFormValues>
+              title="Employment types"
+              description="Contract categories applied to employee records, such as full-time or contract."
+              emptyText="No employment types yet. Add one to categorise contracts."
+              addLabel="Add type"
+              endpoint="/api/v1/employment-types"
+              queryKey={companyKeys.employmentTypes}
+              columns={employmentColumns}
+              getDeleteLabel={(record) => record.name}
+              renderForm={({ formId, record, onSubmit }) => <EmploymentTypeForm formId={formId} record={record} onSubmit={onSubmit} />}
+            />
+          )}
+
+          {activeTab === "holidays" && (
+            <ResourceSection<HolidayCalendar, { year: number; name: string; dates: { date: string; name: string; is_recurring: boolean }[] }>
+              title="Holiday calendars"
+              description="Public holidays that attendance and leave calculations skip over."
+              emptyText="No holiday calendars yet. Add one for the current year."
+              addLabel="Add calendar"
+              endpoint="/api/v1/holiday-calendars"
+              queryKey={companyKeys.holidayCalendars}
+              columns={holidayColumns}
+              getDeleteLabel={(record) => record.name}
+              renderForm={({ formId, record, onSubmit }) => <HolidayForm formId={formId} record={record} onSubmit={onSubmit} />}
+            />
+          )}
+
+          {activeTab === "preferences" && <OnboardingPreferences />}
+          {activeTab === "features" && <PayrollSettingsCard />}
+        </div>
       </div>
-
-      {activeTab === "branches" && (
-        <ResourceSection<Branch, BranchFormValues>
-          title="Branches"
-          addLabel="Add branch"
-          endpoint="/api/v1/branches"
-          queryKey={companyKeys.branches}
-          columns={branchColumns}
-          getDeleteLabel={(record) => record.name}
-          renderForm={({ formId, record, onSubmit }) => <BranchForm formId={formId} record={record} onSubmit={onSubmit} />}
-        />
-      )}
-
-      {activeTab === "departments" && (
-        <ResourceSection<Department, DepartmentFormValues>
-          title="Departments"
-          addLabel="Add department"
-          endpoint="/api/v1/departments"
-          queryKey={companyKeys.departments}
-          columns={departmentColumns}
-          getDeleteLabel={(record) => record.name}
-          renderForm={({ formId, record, onSubmit }) => (
-            <DepartmentForm formId={formId} record={record} branches={branches} departments={departments} onSubmit={onSubmit} />
-          )}
-        />
-      )}
-
-      {activeTab === "positions" && (
-        <ResourceSection<Position, PositionFormValues>
-          title="Positions"
-          addLabel="Add position"
-          endpoint="/api/v1/positions"
-          queryKey={companyKeys.positions}
-          columns={positionColumns}
-          getDeleteLabel={(record) => record.title}
-          renderForm={({ formId, record, onSubmit }) => (
-            <PositionForm formId={formId} record={record} departments={departments} jobGrades={jobGrades} onSubmit={onSubmit} />
-          )}
-        />
-      )}
-
-      {activeTab === "grades" && (
-        <ResourceSection<JobGrade, GradeFormValues>
-          title="Job grades"
-          addLabel="Add grade"
-          endpoint="/api/v1/job-grades"
-          queryKey={companyKeys.jobGrades}
-          columns={gradeColumns}
-          getDeleteLabel={(record) => record.name}
-          renderForm={({ formId, record, onSubmit }) => <GradeForm formId={formId} record={record} onSubmit={onSubmit} />}
-        />
-      )}
-
-      {activeTab === "employment-types" && (
-        <ResourceSection<EmploymentType, EmploymentTypeFormValues>
-          title="Employment types"
-          addLabel="Add type"
-          endpoint="/api/v1/employment-types"
-          queryKey={companyKeys.employmentTypes}
-          columns={employmentColumns}
-          getDeleteLabel={(record) => record.name}
-          renderForm={({ formId, record, onSubmit }) => <EmploymentTypeForm formId={formId} record={record} onSubmit={onSubmit} />}
-        />
-      )}
-
-      {activeTab === "holidays" && (
-        <ResourceSection<HolidayCalendar, { year: number; name: string; dates: { date: string; name: string; is_recurring: boolean }[] }>
-          title="Holiday calendars"
-          addLabel="Add calendar"
-          endpoint="/api/v1/holiday-calendars"
-          queryKey={companyKeys.holidayCalendars}
-          columns={holidayColumns}
-          getDeleteLabel={(record) => record.name}
-          renderForm={({ formId, record, onSubmit }) => <HolidayForm formId={formId} record={record} onSubmit={onSubmit} />}
-        />
-      )}
-
-      {activeTab === "preferences" && <OnboardingPreferences />}
-      {activeTab === "features" && <PayrollSettingsCard />}
     </div>
   );
 }
