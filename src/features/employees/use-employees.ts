@@ -80,6 +80,8 @@ export interface EmployeeInput {
     pension_pin?: string;
     pension_fund_administrator?: string;
     nhf_number?: string;
+    /** Annual rent paid, in kobo. */
+    annual_rent_paid?: number;
   };
 }
 

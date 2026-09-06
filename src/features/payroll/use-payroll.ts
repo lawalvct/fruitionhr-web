@@ -142,6 +142,49 @@ export interface PayrollSettings {
   active_formula_salary_count: number;
 }
 
+/** One PAYE band as a cumulative range. `to: null` is the open top band. */
+export interface TaxBand {
+  from: number;
+  to: number | null;
+  rate: number;
+}
+
+export interface StatutoryRules {
+  period: string;
+  paye: {
+    effective_from: string | null;
+    effective_to: string | null;
+    regime: string;
+    relief_mode: "cra" | "rent";
+    relief: {
+      rent_relief_percent?: number;
+      rent_relief_cap?: number;
+      cra_min?: number;
+      cra_percent?: number;
+      cra_gross_percent?: number;
+    };
+    deducts_pension: boolean;
+    deducts_nhf: boolean;
+    bands: TaxBand[];
+  };
+  pension: { employee_percent: number; employer_percent: number; effective_from: string | null };
+  nhf: { percent: number; effective_from: string | null };
+  nsitf: { percent: number; effective_from: string | null };
+  paye_schedule: Array<{
+    effective_from: string | null;
+    effective_to: string | null;
+    regime: string;
+    is_current: boolean;
+  }>;
+  /** Active-employee coverage of rent declarations; only meaningful under the rent regime. */
+  rent_declarations: {
+    applicable: boolean;
+    declared: number;
+    missing: number;
+    total: number;
+  };
+}
+
 export interface SalaryStructure {
   id: number;
   name: string;
@@ -197,6 +240,8 @@ export interface PayrollRunSummary {
   submitted_at: string | null;
   approved_at: string | null;
   locked_at: string | null;
+  /** When calculation was queued; only set while the run is calculating. */
+  calculating_since: string | null;
   calculation_failure: {
     code: string | null;
     message: string | null;
@@ -242,10 +287,12 @@ export const payrollKeys = {
   components: ["payroll", "salary-components"] as const,
   structures: ["payroll", "salary-structures"] as const,
   settings: ["payroll", "settings"] as const,
+  statutoryRules: (period: string) => ["payroll", "statutory-rules", period] as const,
   formulaCatalog: ["payroll", "formula-catalog"] as const,
   formula: (componentId: number) => ["payroll", "formula", componentId] as const,
   runs: ["payroll", "runs"] as const,
   run: (id: number) => ["payroll", "run", id] as const,
+  register: (id: number) => ["payroll", "register", id] as const,
   preflight: (period: string) => ["payroll", "preflight", period] as const,
   employeeSalary: (employeeId: number | string) => ["payroll", "employee-salary", String(employeeId)] as const,
   salaryHistory: (employeeId: number | string) => ["payroll", "salary-history", String(employeeId)] as const,
@@ -296,6 +343,15 @@ export function usePayrollSettings(enabled = true) {
     enabled,
     queryFn: async () =>
       (await api.get<{ data: PayrollSettings }>("/api/v1/payroll-settings")).data.data,
+  });
+}
+
+export function useStatutoryRules(period: string, enabled = true) {
+  return useQuery({
+    queryKey: payrollKeys.statutoryRules(period),
+    enabled,
+    queryFn: async () =>
+      (await api.get<{ data: StatutoryRules }>("/api/v1/statutory-rules", { params: { period } })).data.data,
   });
 }
 
@@ -547,6 +603,46 @@ export function usePayrollRun(id: number) {
       (await api.get<{ data: PayrollRunSummary & { employees: PayrollRunEmployeeRow[] } }>(`/api/v1/payroll-runs/${id}`)).data.data,
     refetchInterval: (query) =>
       query.state.data?.status === "calculating" ? 1500 : false,
+  });
+}
+
+export type RegisterGroup = "earnings" | "benefits" | "deductions" | "employer";
+
+export interface RegisterColumn {
+  code: string;
+  name: string;
+}
+
+/** Amounts keyed by group, then by component code. Missing code = not applicable. */
+type RegisterAmounts = Record<RegisterGroup, Record<string, number>>;
+
+export interface PayrollRegister {
+  run: { id: number; period: string; status: string; is_reversal: boolean };
+  columns: Record<RegisterGroup, RegisterColumn[]>;
+  rows: Array<{
+    id: number;
+    employee: { id: number; name: string; number: string };
+    amounts: RegisterAmounts;
+    gross: number;
+    total_statutory: number;
+    total_deductions: number;
+    net: number;
+  }>;
+  totals: {
+    amounts: RegisterAmounts;
+    gross: number;
+    total_statutory: number;
+    total_deductions: number;
+    net: number;
+    employee_count: number;
+  };
+}
+
+export function usePayrollRegister(id: number) {
+  return useQuery({
+    queryKey: payrollKeys.register(id),
+    queryFn: async () =>
+      (await api.get<{ data: PayrollRegister }>(`/api/v1/payroll-runs/${id}/register`)).data.data,
   });
 }
 

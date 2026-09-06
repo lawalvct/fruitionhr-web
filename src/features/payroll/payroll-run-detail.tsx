@@ -1,10 +1,11 @@
 "use client";
 
-import { ArrowLeft, Download, FileText, Lock, RefreshCw, RotateCcw, Scale, Search, Send, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Clock, FileText, Lock, RefreshCw, RotateCcw, Scale, Search, Send, Table2, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
 import { Can } from "@/components/can";
+import { ExportMenu } from "@/components/export-menu";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { MoneyText } from "@/components/money-text";
 import { PageHeader } from "@/components/page-header";
@@ -29,7 +30,7 @@ import {
   useReversePayrollRun,
 } from "@/features/payroll/use-payroll";
 import { VarianceSheet } from "@/features/payroll/variance-sheet";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 function periodLabel(period: string) {
   const [y, m] = period.split("-").map(Number);
@@ -37,6 +38,8 @@ function periodLabel(period: string) {
 }
 
 const DOWNLOADABLE = ["approved", "locked", "paid"];
+// Payslips open during review too; the PDF marks itself provisional until approval.
+const PAYSLIP_DOWNLOADABLE = ["review", "pending_approval", ...DOWNLOADABLE];
 
 function nextStep(status: string) {
   const steps: Record<string, string> = {
@@ -50,6 +53,54 @@ function nextStep(status: string) {
   };
 
   return steps[status] ?? "Review the payroll run and complete the next available action.";
+}
+
+/**
+ * A queued run whose worker never collected it looks identical to one that is
+ * calculating normally: status stays "calculating" and no error is recorded.
+ * After a generous wait, say so — the run row is not touched while the job
+ * works, so a genuinely long calculation can trip this too. Word it as a
+ * possibility, never as a diagnosis.
+ */
+const STALL_AFTER_MS = 90_000;
+
+function QueueWaitNotice({ since }: { since: string | null }) {
+  // Ticks on its own so the notice appears while the page sits open, rather
+  // than waiting for the next poll to happen to cross the threshold.
+  const [waited, setWaited] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!since) return;
+
+    const queuedAt = new Date(since).getTime();
+    const timer = setInterval(() => setWaited(Date.now() - queuedAt), 5_000);
+
+    return () => clearInterval(timer);
+  }, [since]);
+
+  if (!since || waited === null || !Number.isFinite(waited) || waited < STALL_AFTER_MS) return null;
+
+  const minutes = Math.max(1, Math.round(waited / 60_000));
+
+  return (
+    <div role="status" className="rounded-xl border border-warning/40 bg-warning/5 p-4 text-sm">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-warning/15 text-warning">
+          <Clock className="size-5" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="font-semibold">
+            Still waiting after {minutes} {minutes === 1 ? "minute" : "minutes"}
+          </h2>
+          <p className="mt-1 max-w-3xl leading-6 text-muted-foreground">
+            This run is queued but has not started calculating. Nothing has been lost — it will
+            calculate as soon as a payroll worker picks it up. If it does not clear shortly, ask
+            your administrator to check that the payroll queue is running.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function PayrollRunDetail({ runId }: { runId: number }) {
@@ -85,6 +136,7 @@ export function PayrollRunDetail({ runId }: { runId: number }) {
   }
 
   const canDownload = DOWNLOADABLE.includes(run.status);
+  const canDownloadPayslip = PAYSLIP_DOWNLOADABLE.includes(run.status);
   const canReverse = ["locked", "paid"].includes(run.status) && !run.is_reversal;
 
   const doReverse = async () => {
@@ -158,6 +210,13 @@ export function PayrollRunDetail({ runId }: { runId: number }) {
               </Button>
             )}
           </Can>
+          {/* Available from review onward: the register is how you check the
+              figures before routing them for approval, not just after. */}
+          {run.employee_count > 0 && (
+            <Button variant="outline" render={<Link href={`/payroll/${run.id}/register`} />}>
+              <Table2 className="size-4" /> Detailed breakdown
+            </Button>
+          )}
           {canDownload && (
             <Button variant="outline" onClick={() => setVarianceOpen(true)}>
               <Scale className="size-4" /> Variance
@@ -185,6 +244,7 @@ export function PayrollRunDetail({ runId }: { runId: number }) {
           This run has been <strong>reversed</strong> and no longer contributes to payroll totals.
         </div>
       )}
+      {run.status === "calculating" && <QueueWaitNotice since={run.calculating_since} />}
       {run.calculation_failure && (
         <div
           role="alert"
@@ -246,30 +306,39 @@ export function PayrollRunDetail({ runId }: { runId: number }) {
         ))}
       </div>
 
-      {/* Downloads */}
+      {/* Downloads — every report offers Excel or PDF from the same endpoint. */}
       {canDownload && (
-        <div className="flex flex-wrap gap-2 rounded-lg border bg-muted/40 p-4">
-          <span className="self-center text-sm font-medium">Reports:</span>
-          <Button variant="outline" size="sm" render={<a href={payrollDownloadUrl(`/payroll-runs/${run.id}/bank-schedule`)} target="_blank" rel="noreferrer" />}>
-            <Download className="size-4" /> Bank schedule
-          </Button>
-          {["paye", "pension", "nhf", "nsitf"].map((type) => (
-            <Button
-              key={type}
-              variant="outline"
-              size="sm"
-              render={<a href={payrollDownloadUrl(`/payroll-runs/${run.id}/statutory-report?type=${type}`)} target="_blank" rel="noreferrer" />}
-            >
-              <Download className="size-4" /> {type.toUpperCase()}
-            </Button>
-          ))}
-          <Button
-            variant="outline"
-            size="sm"
-            render={<a href={payrollDownloadUrl(`/payroll-runs/${run.id}/journal.xlsx`)} target="_blank" rel="noreferrer" />}
-          >
-            <Download className="size-4" /> Journal
-          </Button>
+        <div className="rounded-xl border bg-muted/40 p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-sm font-medium">Reports</p>
+            <p className="text-xs text-muted-foreground">Choose Excel or PDF on each</p>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <ExportMenu
+              label="Bank schedule"
+              path={`/payroll-runs/${run.id}/bank-schedule`}
+              basename={`bank-schedule-${run.period}`}
+            />
+            <ExportMenu
+              label="Register"
+              path={`/payroll-runs/${run.id}/register/export`}
+              basename={`payroll-register-${run.period}`}
+            />
+            <ExportMenu
+              label="Journal"
+              path={`/payroll-runs/${run.id}/journal/export`}
+              basename={`payroll-journal-${run.period}`}
+            />
+            {["paye", "pension", "nhf", "nsitf"].map((type) => (
+              <ExportMenu
+                key={type}
+                label={type.toUpperCase()}
+                path={`/payroll-runs/${run.id}/statutory-report`}
+                params={{ type }}
+                basename={`${type}-report-${run.period}`}
+              />
+            ))}
+          </div>
         </div>
       )}
 
@@ -294,7 +363,7 @@ export function PayrollRunDetail({ runId }: { runId: number }) {
               <th className="px-4 py-2 text-right font-medium">Statutory</th>
               <th className="px-4 py-2 text-right font-medium">Deductions</th>
               <th className="px-4 py-2 text-right font-medium">Net</th>
-              {canDownload && <th className="px-4 py-2"></th>}
+              {canDownloadPayslip && <th className="px-4 py-2"></th>}
             </tr>
           </thead>
           <tbody>
@@ -308,13 +377,13 @@ export function PayrollRunDetail({ runId }: { runId: number }) {
                 <td className="px-4 py-2 text-right"><MoneyText kobo={row.total_statutory} /></td>
                 <td className="px-4 py-2 text-right"><MoneyText kobo={row.total_deductions} /></td>
                 <td className="px-4 py-2 text-right font-semibold text-fruition-700"><MoneyText kobo={row.net} /></td>
-                {canDownload && (
+                {canDownloadPayslip && (
                   <td className="px-4 py-2 text-right">
                     <Button
                       variant="ghost"
                       size="icon-sm"
                       aria-label="Payslip"
-                      render={<a href={payrollDownloadUrl(`/payroll-runs/${run.id}/employees/${row.id}/payslip`)} target="_blank" rel="noreferrer" />}
+                      render={<a href={payrollDownloadUrl(`/payroll-runs/${run.id}/employees/${row.id}/payslip`)} target="_blank" rel="noopener" />}
                     >
                       <FileText className="size-4" />
                     </Button>
@@ -322,10 +391,18 @@ export function PayrollRunDetail({ runId }: { runId: number }) {
                 )}
               </tr>
             ))}
-            {filteredEmployees.length === 0 && <tr><td colSpan={canDownload ? 6 : 5} className="px-4 py-10 text-center text-sm text-muted-foreground">No employee payroll lines match this search.</td></tr>}
+            {filteredEmployees.length === 0 && <tr><td colSpan={canDownloadPayslip ? 6 : 5} className="px-4 py-10 text-center text-sm text-muted-foreground">No employee payroll lines match this search.</td></tr>}
           </tbody>
         </table>
       </div>
+
+      {/* A payslip pulled before approval is real but not final; say so here as
+          well as on the PDF, so nobody circulates one unknowingly. */}
+      {canDownloadPayslip && !canDownload && run.employee_count > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Payslips downloaded now are marked provisional until this run is approved.
+        </p>
+      )}
 
       <ConfirmDialog
         open={lockOpen}

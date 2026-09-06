@@ -56,6 +56,7 @@ const schema = z.object({
   pension_pin: z.string().optional(),
   pension_fund_administrator: z.string().optional(),
   nhf_number: z.string().optional(),
+  annual_rent_paid: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -64,6 +65,12 @@ const selectClass = "h-10 w-full rounded-lg border border-slate-300 bg-backgroun
 
 function emptyToUndefined(value?: string) {
   return value === "" ? undefined : value;
+}
+
+/** Forms hold naira; the API stores kobo. Blank or zero means "not declared". */
+function nairaToKobo(value?: string) {
+  const naira = Number(value);
+  return value && Number.isFinite(naira) && naira > 0 ? Math.round(naira * 100) : undefined;
 }
 
 export function EmployeeEditPage() {
@@ -120,6 +127,9 @@ export function EmployeeEditPage() {
       pension_pin: employee.statutory_details?.pension_pin ?? "",
       pension_fund_administrator: employee.statutory_details?.pension_fund_administrator ?? "",
       nhf_number: employee.statutory_details?.nhf_number ?? "",
+      annual_rent_paid: employee.statutory_details?.annual_rent_paid
+        ? String(employee.statutory_details.annual_rent_paid / 100)
+        : "",
     });
   }, [employee, form]);
 
@@ -163,7 +173,7 @@ export function EmployeeEditPage() {
           hired_at: values.hired_at,
           contacts: values.contact_name ? [{ type: values.contact_type, name: values.contact_name, relationship: emptyToUndefined(values.contact_relationship), phone: emptyToUndefined(values.contact_phone), email: emptyToUndefined(values.contact_email) }] : [],
           bank_accounts: values.bank_name && values.account_number && values.account_name ? [{ bank_name: values.bank_name, bank_code: emptyToUndefined(values.bank_code), account_number: values.account_number, account_name: values.account_name, is_primary: true }] : [],
-          statutory: { tax_id: emptyToUndefined(values.tax_id), pension_pin: emptyToUndefined(values.pension_pin), pension_fund_administrator: emptyToUndefined(values.pension_fund_administrator), nhf_number: emptyToUndefined(values.nhf_number) },
+          statutory: { tax_id: emptyToUndefined(values.tax_id), pension_pin: emptyToUndefined(values.pension_pin), pension_fund_administrator: emptyToUndefined(values.pension_fund_administrator), nhf_number: emptyToUndefined(values.nhf_number), annual_rent_paid: nairaToKobo(values.annual_rent_paid) },
         };
         const assignmentChanged = currentAssignment?.branch_id !== values.branch_id || currentAssignment?.department_id !== values.department_id || currentAssignment?.position_id !== values.position_id || currentAssignment?.job_grade_id !== values.job_grade_id || currentAssignment?.employment_type_id !== values.employment_type_id;
         if (assignmentChanged) input.assignment = { branch_id: values.branch_id, department_id: values.department_id, position_id: values.position_id, job_grade_id: values.job_grade_id, employment_type_id: values.employment_type_id, effective_from: emptyToUndefined(values.effective_from) ?? values.hired_at };
@@ -203,7 +213,7 @@ export function EmployeeEditPage() {
 
       <section className="rounded-xl border border-slate-200 bg-card p-4 shadow-sm sm:p-6 dark:border-slate-700"><div className="border-b border-slate-200 pb-4 dark:border-slate-700"><h2 className="font-heading text-lg font-semibold">Emergency contact</h2><p className="mt-1 text-sm text-muted-foreground">Optional contact information for urgent situations.</p></div><div className="mt-5 grid gap-4 md:grid-cols-3"><div className="grid gap-2"><Label htmlFor="contact_type">Type</Label><select id="contact_type" className={selectClass} {...form.register("contact_type")}><option value="emergency">Emergency</option><option value="next_of_kin">Next of kin</option></select></div><div className="grid gap-2"><Label htmlFor="contact_name">Name</Label><Input id="contact_name" className={inputClass} {...form.register("contact_name")} /></div><div className="grid gap-2"><Label htmlFor="contact_relationship">Relationship</Label><select id="contact_relationship" className={selectClass} {...form.register("contact_relationship")}><option value="">Select relationship</option><option value="spouse">Spouse</option><option value="parent">Parent</option><option value="child">Child</option><option value="sibling">Sibling</option><option value="guardian">Guardian</option><option value="relative">Relative</option><option value="friend">Friend</option><option value="colleague">Colleague</option><option value="other">Other</option></select></div><div className="grid gap-2"><Label htmlFor="contact_phone">Phone</Label><Input id="contact_phone" className={inputClass} {...form.register("contact_phone")} /></div><div className="grid gap-2"><Label htmlFor="contact_email">Email</Label><Input id="contact_email" className={inputClass} type="email" {...form.register("contact_email")} /></div></div></section>
 
-      <section className="rounded-xl border border-slate-200 bg-card p-4 shadow-sm sm:p-6 dark:border-slate-700"><div className="border-b border-slate-200 pb-4 dark:border-slate-700"><h2 className="font-heading text-lg font-semibold">Bank and statutory</h2><p className="mt-1 text-sm text-muted-foreground">Maintain payroll and statutory information.</p></div><div className="mt-5 grid gap-4 md:grid-cols-3"><div className="grid gap-2"><Label htmlFor="bank_name">Bank name</Label><Input id="bank_name" className={inputClass} {...form.register("bank_name")} /></div><div className="grid gap-2"><Label htmlFor="bank_code">Bank code</Label><Input id="bank_code" className={inputClass} {...form.register("bank_code")} /></div><div className="grid gap-2"><Label htmlFor="account_number">Account number</Label><Input id="account_number" className={inputClass} {...form.register("account_number")} /></div><div className="grid gap-2"><Label htmlFor="account_name">Account name</Label><Input id="account_name" className={inputClass} {...form.register("account_name")} /></div><div className="grid gap-2"><Label htmlFor="tax_id">Tax ID</Label><Input id="tax_id" className={inputClass} {...form.register("tax_id")} /></div><div className="grid gap-2"><Label htmlFor="pension_pin">Pension PIN</Label><Input id="pension_pin" className={inputClass} {...form.register("pension_pin")} /></div><div className="grid gap-2"><Label htmlFor="pension_fund_administrator">PFA</Label><Input id="pension_fund_administrator" className={inputClass} {...form.register("pension_fund_administrator")} /></div><div className="grid gap-2"><Label htmlFor="nhf_number">NHF number</Label><Input id="nhf_number" className={inputClass} {...form.register("nhf_number")} /></div></div></section>
+      <section className="rounded-xl border border-slate-200 bg-card p-4 shadow-sm sm:p-6 dark:border-slate-700"><div className="border-b border-slate-200 pb-4 dark:border-slate-700"><h2 className="font-heading text-lg font-semibold">Bank and statutory</h2><p className="mt-1 text-sm text-muted-foreground">Maintain payroll and statutory information.</p></div><div className="mt-5 grid gap-4 md:grid-cols-3"><div className="grid gap-2"><Label htmlFor="bank_name">Bank name</Label><Input id="bank_name" className={inputClass} {...form.register("bank_name")} /></div><div className="grid gap-2"><Label htmlFor="bank_code">Bank code</Label><Input id="bank_code" className={inputClass} {...form.register("bank_code")} /></div><div className="grid gap-2"><Label htmlFor="account_number">Account number</Label><Input id="account_number" className={inputClass} {...form.register("account_number")} /></div><div className="grid gap-2"><Label htmlFor="account_name">Account name</Label><Input id="account_name" className={inputClass} {...form.register("account_name")} /></div><div className="grid gap-2"><Label htmlFor="tax_id">Tax ID</Label><Input id="tax_id" className={inputClass} {...form.register("tax_id")} /></div><div className="grid gap-2"><Label htmlFor="pension_pin">Pension PIN</Label><Input id="pension_pin" className={inputClass} {...form.register("pension_pin")} /></div><div className="grid gap-2"><Label htmlFor="pension_fund_administrator">PFA</Label><Input id="pension_fund_administrator" className={inputClass} {...form.register("pension_fund_administrator")} /></div><div className="grid gap-2"><Label htmlFor="nhf_number">NHF number</Label><Input id="nhf_number" className={inputClass} {...form.register("nhf_number")} /></div><div className="grid gap-2 md:col-span-3"><Label htmlFor="annual_rent_paid">Annual rent paid (₦)</Label><Input id="annual_rent_paid" type="number" min="0" className={inputClass} {...form.register("annual_rent_paid")} /><p className="text-xs text-muted-foreground">Optional. Rent relief is 20% of rent paid, capped at ₦500,000 a year. Leave blank if the employee pays no rent — no relief is applied.</p></div></div></section>
 
       <div className="flex justify-end border-t pt-5"><Button type="submit" disabled={updateEmployee.isPending || uploadEmployeePhoto.isPending}><Save className="size-4" />{uploadEmployeePhoto.isPending ? "Uploading picture..." : updateEmployee.isPending ? "Saving..." : "Save changes"}</Button></div>
     </form>

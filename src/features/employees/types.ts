@@ -43,6 +43,8 @@ export interface EmployeeStatutoryDetails {
   pension_pin?: string | null;
   pension_fund_administrator?: string | null;
   nhf_number?: string | null;
+  /** Annual rent paid, in kobo. Drives NTA 2025 rent relief. */
+  annual_rent_paid?: number | null;
 }
 
 export interface Employee {

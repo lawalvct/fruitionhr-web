@@ -11,6 +11,7 @@ import { toast } from "sonner";
 
 import { Can } from "@/components/can";
 import { FormDialog } from "@/components/form-dialog";
+import { MoneyText } from "@/components/money-text";
 import { PageHeader } from "@/components/page-header";
 import { PageLoader } from "@/components/page-loader";
 import { StatusBadge } from "@/components/status-badge";
@@ -345,6 +346,7 @@ export function EmployeeProfilePage() {
             <p>TIN: {employee.statutory_details?.tax_id ?? "-"}</p>
             <p>Pension PIN: {employee.statutory_details?.pension_pin ?? "-"}</p>
             <p>NHF: {employee.statutory_details?.nhf_number ?? "-"}</p>
+            <p>Annual rent declared: {employee.statutory_details?.annual_rent_paid ? <MoneyText kobo={employee.statutory_details.annual_rent_paid} /> : "-"}</p>
           </section>
         </div>
       )}

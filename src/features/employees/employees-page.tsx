@@ -3,6 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Download, Eye, FileSpreadsheet, FileText, Pencil, Plus, Upload, Users } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -48,8 +49,12 @@ function EmployeeListAvatar({ employee }: { employee: Employee }) {
 }
 
 export function EmployeesPage() {
+  const searchParams = useSearchParams();
   const [departmentId, setDepartmentId] = useState("");
   const [status, setStatus] = useState("");
+  // Deep-linkable so the tax settings page can send you straight to the
+  // employees still missing a rent declaration.
+  const [rentDeclared, setRentDeclared] = useState(() => searchParams.get("rent_declared") ?? "");
   const [exporting, setExporting] = useState<"xlsx" | "pdf" | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const { departments } = useCompanyOptions();
@@ -63,6 +68,7 @@ export function EmployeesPage() {
         params: {
           ...(departmentId ? { "filter[department_id]": departmentId } : {}),
           ...(status ? { "filter[employment_status]": status } : {}),
+          ...(rentDeclared ? { "filter[rent_declared]": rentDeclared } : {}),
         },
       });
       const url = URL.createObjectURL(data);
@@ -201,6 +207,16 @@ export function EmployeesPage() {
           <option value="suspended">Suspended</option>
           <option value="exited">Exited</option>
         </select>
+        <select
+          value={rentDeclared}
+          onChange={(event) => setRentDeclared(event.target.value)}
+          className="h-8 rounded-md border bg-background px-2 text-sm"
+          aria-label="Rent declaration filter"
+        >
+          <option value="">Any rent declaration</option>
+          <option value="1">Rent declared</option>
+          <option value="0">No rent declared</option>
+        </select>
       </div>
 
       <DataTable<Employee>
@@ -210,6 +226,7 @@ export function EmployeesPage() {
         filters={{
           department_id: departmentId,
           employment_status: status,
+          rent_declared: rentDeclared,
         }}
         emptyText="No employees match the current filters."
         loadingContent={<PageLoader label="Loading employees…" />}

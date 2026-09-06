@@ -56,6 +56,7 @@ const schema = z.object({
   pension_pin: z.string().optional(),
   pension_fund_administrator: z.string().optional(),
   nhf_number: z.string().optional(),
+  annual_rent_paid: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -65,7 +66,7 @@ const wizardSteps = [
   { title: "Personal", description: "Identity and contact details", fields: ["first_name", "middle_name", "last_name", "official_email", "personal_email", "phone", "gender", "date_of_birth", "marital_status", "address", "city", "state", "country", "country_code"] as Array<keyof FormValues> },
   { title: "Employment", description: "Role, status, and assignment", fields: ["hired_at", "effective_from", "employment_status", "branch_id", "department_id", "position_id", "job_grade_id", "employment_type_id"] as Array<keyof FormValues> },
   { title: "Contacts", description: "Emergency contact information", fields: ["contact_type", "contact_name", "contact_relationship", "contact_phone", "contact_email"] as Array<keyof FormValues> },
-  { title: "Payroll details", description: "Bank and statutory details", fields: ["bank_name", "bank_code", "account_number", "account_name", "tax_id", "pension_pin", "pension_fund_administrator", "nhf_number"] as Array<keyof FormValues> },
+  { title: "Payroll details", description: "Bank and statutory details", fields: ["bank_name", "bank_code", "account_number", "account_name", "tax_id", "pension_pin", "pension_fund_administrator", "nhf_number", "annual_rent_paid"] as Array<keyof FormValues> },
 ] as const;
 
 function Field({
@@ -159,6 +160,12 @@ function emptyToUndefined(value?: string) {
   return value === "" ? undefined : value;
 }
 
+/** Forms hold naira; the API stores kobo. Blank or zero means "not declared". */
+function nairaToKobo(value?: string) {
+  const naira = Number(value);
+  return value && Number.isFinite(naira) && naira > 0 ? Math.round(naira * 100) : undefined;
+}
+
 export function EmployeeFormPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -208,6 +215,7 @@ export function EmployeeFormPage() {
       pension_pin: "",
       pension_fund_administrator: "",
       nhf_number: "",
+      annual_rent_paid: "",
     },
   });
 
@@ -307,6 +315,7 @@ export function EmployeeFormPage() {
         pension_pin: emptyToUndefined(values.pension_pin),
         pension_fund_administrator: emptyToUndefined(values.pension_fund_administrator),
         nhf_number: emptyToUndefined(values.nhf_number),
+        annual_rent_paid: nairaToKobo(values.annual_rent_paid),
       },
     };
 
@@ -334,6 +343,7 @@ export function EmployeeFormPage() {
         "statutory.pension_pin": "pension_pin",
         "statutory.pension_fund_administrator": "pension_fund_administrator",
         "statutory.nhf_number": "nhf_number",
+        "statutory.annual_rent_paid": "annual_rent_paid",
       });
     }
   });
@@ -563,6 +573,12 @@ export function EmployeeFormPage() {
           <Field label="Pension PIN" name="pension_pin" register={form.register} errors={form.formState.errors} />
           <Field label="PFA" name="pension_fund_administrator" register={form.register} errors={form.formState.errors} />
           <Field label="NHF number" name="nhf_number" register={form.register} errors={form.formState.errors} />
+          <div className="md:col-span-2">
+            <Field label="Annual rent paid (₦)" name="annual_rent_paid" type="number" register={form.register} errors={form.formState.errors} />
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Optional. Rent relief is 20% of rent paid, capped at ₦500,000 a year. Leave blank if the employee pays no rent — no relief is applied.
+            </p>
+          </div>
         </div>
       </Section>}
 

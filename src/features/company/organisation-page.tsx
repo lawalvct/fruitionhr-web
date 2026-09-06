@@ -11,6 +11,7 @@ import {
   Layers,
   Network,
   Plus,
+  ScrollText,
   Settings2,
   Sparkles,
   Trash2,
@@ -47,6 +48,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OnboardingPreferences } from "@/features/onboarding/onboarding-preferences";
 import { PayrollSettingsCard } from "@/features/payroll/payroll-settings-card";
+import { StatutoryRulesCard } from "@/features/payroll/statutory-rules-card";
 import { mapLaravelErrorsToForm, nullableNumber } from "@/lib/forms";
 import { cn } from "@/lib/utils";
 import type {
@@ -75,6 +77,7 @@ const tabs = [
   { id: "grades", label: "Job grades", hint: "Levels and salary bands", group: "Company structure", icon: Layers },
   { id: "employment-types", label: "Employment types", hint: "Full-time, contract, intern", group: "Work setup", icon: IdCard },
   { id: "holidays", label: "Holidays", hint: "Public holiday calendars", group: "Work setup", icon: CalendarDays },
+  { id: "statutory", label: "Tax & statutory", hint: "PAYE bands and rates", group: "Work setup", icon: ScrollText },
   { id: "preferences", label: "Preferences", hint: "Company profile and defaults", group: "Workspace", icon: Settings2 },
   { id: "features", label: "Features", hint: "Optional payroll modules", group: "Workspace", icon: Sparkles },
 ] as const;
@@ -906,6 +909,7 @@ export function OrganisationPage() {
             />
           )}
 
+          {activeTab === "statutory" && <StatutoryRulesCard />}
           {activeTab === "preferences" && <OnboardingPreferences />}
           {activeTab === "features" && <PayrollSettingsCard />}
         </div>
