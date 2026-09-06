@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, Landmark, LockKeyhole, Percent, ScrollText, Users } from "lucide-react";
+import { CalendarClock, Calculator, Landmark, LockKeyhole, Percent, ScrollText, Users } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -8,8 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useCan } from "@/features/auth/use-auth";
-import { useStatutoryRules, type TaxBand } from "@/features/payroll/use-payroll";
+import { apiErrorMessage } from "@/lib/api";
+import { toast } from "sonner";
+import {
+  usePayrollSettings,
+  useSetPayeAutoCalculation,
+  useStatutoryRules,
+  type TaxBand,
+} from "@/features/payroll/use-payroll";
 import { cn } from "@/lib/utils";
 
 /** Kobo to naira, no decimals: tax thresholds are always whole naira. */
@@ -49,8 +57,30 @@ function RateTile({ label, value, hint }: { label: string; value: string; hint: 
 
 export function StatutoryRulesCard() {
   const canView = useCan("payroll.view");
+  const canManage = useCan("payroll.settings.manage");
   const [period, setPeriod] = useState(currentPeriod());
   const rules = useStatutoryRules(period, canView);
+  const settings = usePayrollSettings(canView);
+  const setPaye = useSetPayeAutoCalculation();
+  const [pendingPaye, setPendingPaye] = useState<boolean | null>(null);
+
+  const payeAuto = settings.data?.paye_auto_calculation_enabled ?? true;
+
+  async function confirmPaye() {
+    if (pendingPaye === null) return;
+
+    try {
+      await setPaye.mutateAsync(pendingPaye);
+      toast.success(
+        pendingPaye
+          ? "FruitionHR will calculate PAYE again from the next payroll run."
+          : "PAYE calculation turned off. Deduct it through your own salary component.",
+      );
+      setPendingPaye(null);
+    } catch (error) {
+      toast.error(apiErrorMessage(error));
+    }
+  }
 
   if (!canView) {
     return (
@@ -124,6 +154,49 @@ export function StatutoryRulesCard() {
                   governs {monthLabel(data.period)} — effective {data.paye.effective_from}
                   {data.paye.effective_to ? ` to ${data.paye.effective_to}` : " onward"}
                 </span>
+              </div>
+
+              {/* Governs whether any of the bands below are applied at all,
+                  so it sits above them rather than in a settings footnote. */}
+              <div className={cn(
+                "flex flex-col gap-4 rounded-xl border p-4 sm:flex-row sm:items-start sm:justify-between",
+                payeAuto ? "bg-muted/30" : "border-amber-300/60 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-950/20",
+              )}>
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className={cn(
+                    "grid size-10 shrink-0 place-items-center rounded-xl",
+                    payeAuto
+                      ? "bg-fruition-100 text-fruition-800 dark:bg-fruition-900/40 dark:text-fruition-200"
+                      : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200",
+                  )}>
+                    <Calculator className="size-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-heading font-semibold">Calculate PAYE automatically</h3>
+                      <Badge variant={payeAuto ? "default" : "secondary"}>{payeAuto ? "On" : "Off"}</Badge>
+                    </div>
+                    <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                      {payeAuto
+                        ? "FruitionHR works PAYE out from the bands below and deducts it on every payslip."
+                        : "FruitionHR is not deducting PAYE. Add your own PAYE salary component, or no tax will come off anyone's pay."}
+                    </p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Pension, NHF and NSITF are unaffected either way — they are separate obligations.
+                      {!canManage && " Manage payroll settings access is required to change this."}
+                    </p>
+                  </div>
+                </div>
+                {canManage && (
+                  <Button
+                    variant="outline"
+                    className="shrink-0"
+                    disabled={setPaye.isPending || settings.isLoading}
+                    onClick={() => setPendingPaye(!payeAuto)}
+                  >
+                    {payeAuto ? "Turn off" : "Turn on"}
+                  </Button>
+                )}
               </div>
 
               <div>
@@ -254,6 +327,20 @@ export function StatutoryRulesCard() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={pendingPaye !== null}
+        onOpenChange={(open) => !open && setPendingPaye(null)}
+        title={pendingPaye ? "Calculate PAYE automatically?" : "Stop calculating PAYE?"}
+        description={
+          pendingPaye
+            ? "FruitionHR will deduct PAYE using the bands on this page from the next payroll calculation. Remove any PAYE salary component you added, or tax will be deducted twice."
+            : "FruitionHR will stop deducting PAYE. Any payroll you calculate from now on will have no tax line unless you deduct it through your own salary component. Runs already locked are not affected."
+        }
+        confirmLabel={pendingPaye ? "Turn on" : "Turn off"}
+        isPending={setPaye.isPending}
+        onConfirm={confirmPaye}
+      />
 
       {data && data.paye_schedule.length > 1 && (
         <Card>

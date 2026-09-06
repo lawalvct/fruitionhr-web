@@ -140,6 +140,8 @@ export interface FormulaEvaluation {
 export interface PayrollSettings {
   advanced_salary_formulas_enabled: boolean;
   active_formula_salary_count: number;
+  /** Whether FruitionHR works PAYE out, or the company deducts it via its own component. */
+  paye_auto_calculation_enabled: boolean;
 }
 
 /** One PAYE band as a cumulative range. `to: null` is the open top band. */
@@ -352,6 +354,26 @@ export function useStatutoryRules(period: string, enabled = true) {
     enabled,
     queryFn: async () =>
       (await api.get<{ data: StatutoryRules }>("/api/v1/statutory-rules", { params: { period } })).data.data,
+  });
+}
+
+export function useSetPayeAutoCalculation() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (enabled: boolean) => {
+      await ensureCsrf();
+      const action = enabled ? "enable" : "disable";
+      const { data } = await api.post<{ data: PayrollSettings }>(
+        `/api/v1/payroll-settings/paye-calculation/${action}`,
+      );
+
+      return data.data;
+    },
+    onSuccess: (settings) => {
+      qc.setQueryData(payrollKeys.settings, settings);
+      void qc.invalidateQueries({ queryKey: payrollKeys.settings });
+    },
   });
 }
 
