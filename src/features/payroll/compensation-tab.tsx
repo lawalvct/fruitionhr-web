@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiErrorMessage } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import {
   calcSummary,
   isPercentCalc,
@@ -128,7 +129,7 @@ export function CompensationTab({
         effective_from: increaseFrom,
         change_reason: increaseReason.trim(),
       });
-      toast.success("Basic salary increase scheduled.");
+      toast.success(savedMessage("Basic salary increase", increaseFrom));
       setIncreasing(false);
     } catch (error) {
       toast.error(apiErrorMessage(error));
@@ -163,7 +164,7 @@ export function CompensationTab({
           })),
         ],
       });
-      toast.success("Salary assigned.");
+      toast.success(savedMessage("Compensation", from));
       setEditing(false);
     } catch (error) {
       toast.error(apiErrorMessage(error));
@@ -247,11 +248,12 @@ export function CompensationTab({
               <Label htmlFor="increase-basic">New basic salary (₦ / month)</Label>
               <AmountInput id="increase-basic" value={newBasic} onValueChange={setNewBasic} />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="increase-from">Effective from</Label>
-              <Input id="increase-from" type="date" value={increaseFrom} onChange={(event) => setIncreaseFrom(event.target.value)} />
-              <p className="text-xs text-muted-foreground">Use the first day of a payroll month.</p>
-            </div>
+            <EffectiveFromField
+              id="increase-from"
+              value={increaseFrom}
+              onChange={setIncreaseFrom}
+              hasExistingSalary
+            />
             <div className="grid gap-2">
               <Label htmlFor="increase-reason">Reason</Label>
               <Input id="increase-reason" value={increaseReason} onChange={(event) => setIncreaseReason(event.target.value)} placeholder="e.g. Annual salary review" />
@@ -451,10 +453,12 @@ export function CompensationTab({
                 );
               })}
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="comp-from">Effective from</Label>
-              <Input id="comp-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-            </div>
+            <EffectiveFromField
+              id="comp-from"
+              value={from}
+              onChange={setFrom}
+              hasExistingSalary={salary !== null && salary !== undefined}
+            />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
               <Button
@@ -500,6 +504,92 @@ export function CompensationTab({
       </div>
     </div>
   );
+}
+
+/**
+ * When a compensation change starts applying.
+ *
+ * Payroll resolves each employee's salary as at the first of the period, so a
+ * change only reaches a month's payroll if it is effective from that month's
+ * first day. Offering a free date invites picking the 15th and quietly missing
+ * the run, so the choice is framed by payroll month instead.
+ */
+function EffectiveFromField({
+  id,
+  value,
+  onChange,
+  hasExistingSalary,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  hasExistingSalary: boolean;
+}) {
+  const thisMonth = monthStart();
+  const nextMonth = nextMonthStart();
+  const isThisMonth = value === thisMonth;
+  const isNextMonth = value === nextMonth;
+
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={id}>Takes effect</Label>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => onChange(thisMonth)}
+          className={cn(
+            "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+            isThisMonth ? "border-fruition-300 bg-fruition-50/70" : "hover:bg-muted/60",
+          )}
+        >
+          <span className="block font-medium">Immediately</span>
+          <span className="block text-xs text-muted-foreground">{monthLabel(thisMonth)} payroll</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(nextMonth)}
+          className={cn(
+            "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+            isNextMonth ? "border-fruition-300 bg-fruition-50/70" : "hover:bg-muted/60",
+          )}
+        >
+          <span className="block font-medium">Next month</span>
+          <span className="block text-xs text-muted-foreground">{monthLabel(nextMonth)} payroll</span>
+        </button>
+        <div className="grid gap-1">
+          <Input
+            id={id}
+            type="month"
+            className="h-auto py-2"
+            value={value.slice(0, 7)}
+            onChange={(event) => onChange(event.target.value ? `${event.target.value}-01` : thisMonth)}
+            aria-label="Choose a different payroll month"
+          />
+          <span className="text-xs text-muted-foreground">Or choose a month</span>
+        </div>
+      </div>
+
+      {isThisMonth && (
+        <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          {hasExistingSalary
+            ? `This replaces the current figures from ${monthLabel(thisMonth)}. If payroll for this month is already calculated, re-run it to pick up the change.`
+            : `Applies from ${monthLabel(thisMonth)}, so this month's payroll will use it.`}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Say plainly whether the change lands on this month's payroll or a later one. */
+function savedMessage(subject: string, effectiveFrom: string) {
+  return effectiveFrom === monthStart()
+    ? `${subject} updated from ${monthLabel(effectiveFrom)}. Re-run payroll for this month to apply it.`
+    : `${subject} scheduled from ${monthLabel(effectiveFrom)}.`;
+}
+
+function monthLabel(value: string) {
+  return new Intl.DateTimeFormat("en-NG", { month: "long", year: "numeric", timeZone: "UTC" })
+    .format(new Date(`${value.slice(0, 7)}-01T00:00:00Z`));
 }
 
 function monthStart() {
